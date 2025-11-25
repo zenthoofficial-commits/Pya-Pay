@@ -1,0 +1,60 @@
+{
+  "rules": {
+    ".read": "root.child('admins/' + auth.uid).exists()",
+    ".write": "root.child('admins/' + auth.uid).exists()",
+    "admins": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "trips": {
+      ".indexOn": ["status", "driverId", "passengerId", "createdAt"],
+      ".read": "auth != null",
+      "$tripId": {
+        ".read": "auth != null && (data.child('passengerId').val() === auth.uid || data.child('driverId').val() === auth.uid || data.child('status').val() === 'pending' || root.child('admins/' + auth.uid).exists())",
+        ".write": "auth != null && ((!data.exists() && newData.child('passengerId').val() === auth.uid) || (data.exists() && data.child('passengerId').val() === auth.uid) || (data.exists() && data.child('driverId').val() === auth.uid) || (data.exists() && data.child('status').val() === 'pending' && !data.hasChild('driverId') && newData.child('driverId').val() === auth.uid) || (data.child('passengerId').val() === auth.uid && newData.child('status').val() === 'cancelled') || root.child('admins/' + auth.uid).exists())"
+      }
+    },
+    "completedTrips": {
+      ".read": "auth != null || root.child('admins/' + auth.uid).exists()",
+      "$driverId": {
+        ".read": "auth != null && $driverId === auth.uid || root.child('admins/' + auth.uid).exists()",
+        ".write": "auth != null && $driverId === auth.uid || root.child('admins/' + auth.uid).exists()"
+      }
+    },
+    "driverLocations": {
+      ".indexOn": ["timestamp"],
+      ".read": "auth != null",
+      "$driverId": {
+        ".write": "auth != null && $driverId === auth.uid"
+      }
+    },
+    "chats": {
+      "$tripId": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "messages": {
+          ".indexOn": "timestamp"
+        }
+      }
+    },
+    "drivers": {
+      "$driverId": {
+        ".read": "auth != null",
+        ".write": "auth != null && $driverId === auth.uid || root.child('admins/' + auth.uid).exists()"
+      }
+    },
+    "passengers": {
+      "$passengerId": {
+        ".read": "auth != null",
+        ".write": "auth != null && ($passengerId === auth.uid || root.child('admins/' + auth.uid).exists())",
+        "completedTrips": {
+           "$tripId": {
+             ".write": "auth != null"
+           }
+        }
+      }
+    }
+  }
+}
