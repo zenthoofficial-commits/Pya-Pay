@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { ref, onChildAdded, query as dbQuery, orderByChild, equalTo, update, remove, onValue, set, serverTimestamp, get, off } from 'firebase/database';
+import { ref, query as dbQuery, orderByChild, equalTo, update, remove, onValue, set, serverTimestamp, get, off } from 'firebase/database';
 import { auth, db } from './services/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { Trip, LatLngLiteral } from './types';
 import { calculateTripDetails } from './services/tripService';
 import { sendMessage } from './services/chatService';
@@ -78,15 +77,9 @@ const QuickReplyPopup: React.FC<{onSend: (msg: string) => void, onOpenChat: () =
     )
 }
 
-/**
- * Calculates the distance between two points on Earth using the Haversine formula.
- * @param p1 - The first point with latitude and longitude.
- * @param p2 - The second point with latitude and longitude.
- * @returns The distance in meters.
- */
 const getHaversineDistance = (p1: LatLngLiteral, p2: LatLngLiteral): number => {
     const R = 6371e3; // Earth's radius in metres
-    const φ1 = p1.lat * Math.PI/180; // φ, λ in radians
+    const φ1 = p1.lat * Math.PI/180;
     const φ2 = p2.lat * Math.PI/180;
     const Δφ = (p2.lat-p1.lat) * Math.PI/180;
     const Δλ = (p2.lng-p1.lng) * Math.PI/180;
@@ -119,7 +112,6 @@ const App: React.FC = () => {
   const [onTripUIVisible, setOnTripUIVisible] = useState(true);
   const [viewingTripSummary, setViewingTripSummary] = useState<Trip | null>(null);
 
-  // New features state
   const [destinationFilter, setDestinationFilter] = useState<{ address: string; location: LatLngLiteral } | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [showSOSConfirm, setShowSOSConfirm] = useState(false);
@@ -138,14 +130,14 @@ const App: React.FC = () => {
   
   // Main effect for auth and data loading
   useEffect(() => {
-    const dataListeners: (() => void)[] = [];
+    let profileUnsubscribe: (() => void) | undefined;
+    let historyUnsubscribe: (() => void) | undefined;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-        // Clean up old listeners when user changes
-        dataListeners.forEach(l => l());
-        dataListeners.length = 0;
+    const authUnsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        // Cleanup previous listeners if any
+        if (profileUnsubscribe) profileUnsubscribe();
+        if (historyUnsubscribe) historyUnsubscribe();
 
-        // Reset state for new user/logout
         setUser(currentUser);
         setDriverId(null);
         setIsOnline(false);
@@ -154,6 +146,7 @@ const App: React.FC = () => {
         setTripStage(null);
         setIsDataLoaded(false);
         setTripRequests([]);
+        setBalance(0);
 
         if (currentUser) {
             const currentDriverId = currentUser.uid;
@@ -163,24 +156,31 @@ const App: React.FC = () => {
                 // Ensure driver profile exists
                 const driverProfileRef = ref(db, `drivers/${currentDriverId}`);
                 const profileSnap = await get(driverProfileRef);
+                
+                // If profile is deleted by Admin (or doesn't exist), force logout
                 if (!profileSnap.exists()) {
-                     console.error("Driver profile does not exist in DB. This should not happen with admin-created accounts.");
-                     const name = currentUser.email?.split('@')[0] || "Driver";
-                     await set(driverProfileRef, {
-                        name: name, isOnline: false, isAvailable: false, createdAt: serverTimestamp()
-                    });
+                     alert("Account not found. Please contact Admin.");
+                     await signOut(auth);
+                     setIsAuthenticating(false);
+                     return;
                 }
 
-                // 1. Listen for Profile changes (isOnline)
-                const driverRef = ref(db, `drivers/${currentDriverId}`);
-                const profileListener = onValue(driverRef, (snapshot) => {
-                    if (snapshot.exists()) setIsOnline(snapshot.val().isOnline || false);
+                // 1. Listen for Profile changes (isOnline, walletBalance, Ban check)
+                profileUnsubscribe = onValue(driverProfileRef, (snapshot) => {
+                    if (snapshot.exists()) {
+                        const data = snapshot.val();
+                        setIsOnline(data.isOnline || false);
+                        setBalance(data.walletBalance || 0); // Update balance from DB
+                    } else {
+                        // Account deleted while logged in
+                        alert("Account disabled by Admin.");
+                        signOut(auth);
+                    }
                 });
-                dataListeners.push(() => off(driverRef, 'value', profileListener));
 
                 // 2. Listen for Completed Trips (tripHistory)
                 const completedTripsRef = ref(db, `completedTrips/${currentDriverId}`);
-                const historyListener = onValue(completedTripsRef, (snapshot) => {
+                historyUnsubscribe = onValue(completedTripsRef, (snapshot) => {
                     if (snapshot.exists()) {
                         const tripsData = snapshot.val();
                         const tripsArray = Object.values(tripsData) as Trip[];
@@ -189,7 +189,6 @@ const App: React.FC = () => {
                         setTripHistory([]);
                     }
                 });
-                dataListeners.push(() => off(completedTripsRef, 'value', historyListener));
 
                 // 3. Check for active trip
                 const activeTripQuery = dbQuery(ref(db, 'trips'), orderByChild('driverId'), equalTo(currentDriverId));
@@ -223,34 +222,24 @@ const App: React.FC = () => {
                 setIsAuthenticating(false);
             }
         } else {
-            // Logged out
             setIsDataLoaded(true);
             setIsAuthenticating(false);
         }
     });
 
     return () => {
-        unsubscribeAuth();
-        dataListeners.forEach(l => l());
+        authUnsubscribe();
+        if (profileUnsubscribe) profileUnsubscribe();
+        if (historyUnsubscribe) historyUnsubscribe();
     };
-}, []);
-
-  useEffect(() => {
-    // Update balance from trip history
-    const newBalance = tripHistory.reduce((acc, trip) => {
-        const driverGets = trip.fare - 100 - Math.round((trip.fare - 100) * 0.14);
-        return acc + driverGets;
-    }, 0); // Starting balance is 0 for a real app
-    setBalance(newBalance);
-  }, [tripHistory]);
+  }, []);
 
 
   useEffect(() => {
-    // A clear "Ting" sound for notifications
     tripRequestAudioRef.current = new Audio("data:audio/wav;base64,UklGRlFFT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YUFENQDI7PAA8gDwAPUA9ADzAPIBAAIEAwQDBAIBAAAAAP8A/gD4APUA8gDxAPIA8gDzAO8A7ADoAN4A2gDYANoA3gDkAO0A9AEAAv9//wD+APwA+gD7AP0AAQIDBAUGBwgJCgsMDQ4PDxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==");
   }, []);
 
-  // Listen for trip requests using onValue for robustness
+  // Listen for trip requests
   useEffect(() => {
     if (!isOnline || activeTrip || !driverId) {
       setTripRequests([]);
@@ -260,15 +249,13 @@ const App: React.FC = () => {
     const tripsRef = ref(db, "trips");
     const q = dbQuery(tripsRef, orderByChild("status"), equalTo("pending"));
 
-    const listener = onValue(q, async (snapshot) => {
+    const unsubscribe = onValue(q, async (snapshot) => {
       const tripsData = snapshot.val();
       if (tripsData) {
         const potentialTripsPromises = Object.entries(tripsData)
           .map(([id, data]) => ({ id, ...(data as any) }))
           .filter(trip => {
-             // If trip has a requestedDriverId, only that driver should see it
              if (trip.requestedDriverId && trip.requestedDriverId !== driverId) return false;
-             // If trip doesn't have requestedDriverId, anyone can see it (assuming no driverId assigned yet)
              return !trip.driverId;
           })
           .map(async (trip) => {
@@ -276,18 +263,21 @@ const App: React.FC = () => {
             if (!currentLocation) return null;
 
             const details = await calculateTripDetails(currentLocation, trip.pickup, trip.dropoff);
-            if (!details.pickupLeg || !details.dropoffLeg) return null;
-
-            const validTrip: Trip = { ...trip, ...details };
+            // Even if route calculation fails, show the trip but with default values to avoid hiding requests
+            const validTrip: Trip = { 
+                ...trip, 
+                ...details,
+                // Fallback details if calculation failed
+                pickupLeg: details.pickupLeg || { distance: 'Unknown', duration: 'Unknown' },
+                dropoffLeg: details.dropoffLeg || { distance: 'Unknown', duration: 'Unknown' }
+            };
 
             if (destinationFilter && !trip.requestedDriverId) {
               const pickupToDriverDist = getHaversineDistance(
                 currentLocation,
                 validTrip.pickup
               );
-              if (pickupToDriverDist > 5000) { // 5km filter
-                return null;
-              }
+              if (pickupToDriverDist > 5000) return null;
             }
             return validTrip;
           });
@@ -295,66 +285,55 @@ const App: React.FC = () => {
         const resolvedTrips = (await Promise.all(potentialTripsPromises)).filter((t): t is Trip => t !== null);
         setTripRequests(resolvedTrips.sort((a,b) => b.fare - a.fare));
       } else {
-        setTripRequests([]); // No pending trips found
+        setTripRequests([]);
       }
-    }, (error) => {
-      console.error("RTDB listener error:", error);
-      setFirestoreError(`Database error: ${error.message}. Check console for details.`);
     });
     
-    return () => listener();
+    return () => unsubscribe();
   }, [isOnline, activeTrip, destinationFilter, driverId]);
 
-
+  // Audio Notifications
   useEffect(() => {
     if (isOnline && !activeTrip) {
       if (tripRequests.length > 0 && !hasPlayedSoundForCurrentRequests.current) {
         tripRequestAudioRef.current?.play().catch(e => console.warn("Audio autoplay failed.", e));
         hasPlayedSoundForCurrentRequests.current = true;
       } else if (tripRequests.length === 0) {
-        hasPlayedSoundForCurrentRequests.current = false; // Reset when requests are cleared
+        hasPlayedSoundForCurrentRequests.current = false;
       }
     }
   }, [isOnline, activeTrip, tripRequests.length]);
 
-  // Listen for cancellation on the active trip
+  // Active Trip Cancellation Listener
   useEffect(() => {
     if (!activeTrip || !activeTrip.id) return;
-
     const tripRef = ref(db, `trips/${activeTrip.id}`);
-    const unsubscribe = onValue(tripRef, (snapshot) => {
+    const unsubscribe = onValue(tripRef, async (snapshot) => {
         if (snapshot.exists()) {
             const updatedTripData = snapshot.val() as Trip;
             if (updatedTripData.status === 'cancelled') {
-                console.log("Trip was cancelled by passenger.");
                 const cancellationFee = updatedTripData.cancellationFee || null;
-                
-                // Show a notification modal/alert
                 setCancellationAlert({ show: true, fee: cancellationFee });
                 
-                // Update balance if there's a fee
-                if (cancellationFee && cancellationFee > 0) {
-                    setBalance(prev => prev + cancellationFee);
+                if (cancellationFee && cancellationFee > 0 && driverId) {
+                     // Update balance directly (simulating backend logic)
+                     const newBal = balance + cancellationFee;
+                     await update(ref(db, `drivers/${driverId}`), { walletBalance: newBal });
                 }
             }
-        } else {
-             console.log("Active trip document was deleted, likely completed.");
         }
-    }, (error) => {
-        console.error("Error listening to active trip:", error);
     });
-
     return () => unsubscribe();
-  }, [activeTrip]);
+  }, [activeTrip, balance, driverId]);
 
-  // Update driver location in Firebase
+  // Update Driver Location
   useEffect(() => {
     if (isOnline && location && driverId) {
       const driverLocationRef = ref(db, `driverLocations/${driverId}`);
       const locationData = {
         lat: location.lat,
         lng: location.lng,
-        heading: heading ?? 0, // Default heading to 0 if null
+        heading: heading ?? 0,
         isAvailable: !activeTrip,
         timestamp: serverTimestamp()
       };
@@ -384,76 +363,53 @@ const App: React.FC = () => {
   
   const handleGoOnline = async () => {
     if (!driverId) return;
-    if (tripRequestAudioRef.current) {
-        tripRequestAudioRef.current.load();
-    }
-    if (typeof window.DeviceOrientationEvent.requestPermission === 'function') {
-        await window.DeviceOrientationEvent.requestPermission();
-    }
-    if (Notification.permission !== "granted") {
-        await Notification.requestPermission();
-    }
+    if (tripRequestAudioRef.current) tripRequestAudioRef.current.load();
+    if (typeof window.DeviceOrientationEvent?.requestPermission === 'function') await window.DeviceOrientationEvent.requestPermission();
+    if (Notification.permission !== "granted") await Notification.requestPermission();
     
-    const driverRef = ref(db, `drivers/${driverId}`);
-    await update(driverRef, { isOnline: true, isAvailable: !activeTrip });
+    await update(ref(db, `drivers/${driverId}`), { isOnline: true, isAvailable: !activeTrip });
     setIsOnline(true);
   }
 
   const handleGoOffline = () => {
     if (driverId) {
         remove(ref(db, `driverLocations/${driverId}`));
-        const driverRef = ref(db, `drivers/${driverId}`);
-        update(driverRef, { isOnline: false, isAvailable: false });
+        update(ref(db, `drivers/${driverId}`), { isOnline: false, isAvailable: false });
     }
     setIsOnline(false);
   };
 
-  const handleDeclineTrip = (tripId: string) => {
-      setTripRequests(prev => prev.filter(t => t.id !== tripId));
-  };
+  const handleDeclineTrip = (tripId: string) => setTripRequests(prev => prev.filter(t => t.id !== tripId));
   
   const handleArrivedAtPickup = async () => {
     if (!activeTrip) return;
-    try {
-        const tripRef = ref(db, `trips/${activeTrip.id}`);
-        await update(tripRef, { status: 'at_pickup' });
-        setTripStage('at_pickup');
-    } catch (e) {
-        console.error("Failed to update trip status to at_pickup:", e);
-        alert("Could not update trip status. Please check your connection.");
-    }
+    await update(ref(db, `trips/${activeTrip.id}`), { status: 'at_pickup' });
+    setTripStage('at_pickup');
   };
 
   const handleStartTrip = async () => {
     if (!activeTrip) return;
-    try {
-        const tripRef = ref(db, `trips/${activeTrip.id}`);
-        await update(tripRef, { status: 'to_dropoff' });
-        setTripStage('to_dropoff');
-    } catch (e) {
-        console.error("Failed to update trip status to to_dropoff:", e);
-        alert("Could not start trip. Please check your connection.");
-    }
+    await update(ref(db, `trips/${activeTrip.id}`), { status: 'to_dropoff' });
+    setTripStage('to_dropoff');
   };
 
   const handleCompleteTrip = async () => {
     if (activeTrip && driverId) {
         const completedTrip = { ...activeTrip, completedAt: Date.now() };
         
-        // 1. Save to Driver's History
-        const completedTripRef = ref(db, `completedTrips/${driverId}/${activeTrip.id}`);
-        await set(completedTripRef, completedTrip);
+        // 1. Save History
+        await set(ref(db, `completedTrips/${driverId}/${activeTrip.id}`), completedTrip);
+        await set(ref(db, `passengers/${activeTrip.passengerId}/completedTrips/${activeTrip.id}`), completedTrip);
 
-        // 2. Save to Passenger's History (So they can see it in their app)
-        const passengerHistoryRef = ref(db, `passengers/${activeTrip.passengerId}/completedTrips/${activeTrip.id}`);
-        await set(passengerHistoryRef, completedTrip);
+        // 2. Update Balance (Simulated Backend Logic)
+        // 14% Commission deduction logic
+        const driverGets = activeTrip.fare - Math.round(activeTrip.fare * 0.14);
+        const newBalance = balance + driverGets;
+        await update(ref(db, `drivers/${driverId}`), { walletBalance: newBalance, isAvailable: true });
 
-        // 3. Remove from Active Trips
+        // 3. Cleanup Active Trip
         await remove(ref(db, `trips/${activeTrip.id}`));
         
-        const driverRef = ref(db, `drivers/${driverId}`);
-        await update(driverRef, { isAvailable: true });
-
         setViewingTripSummary(completedTrip);
         setOnTripUIVisible(true);
     }
@@ -472,36 +428,27 @@ const App: React.FC = () => {
 
   const handleSOSConfirm = () => {
     setShowSOSConfirm(false);
-    alert("အရေးပေါ်အချက်ပေး ပို့လိုက်ပါပြီ။ သင်၏တည်နေရာကို ဘေးကင်းရေးအဖွဲ့ထံ မျှဝေလိုက်ပါသည်။");
+    alert("အရေးပေါ်အချက်ပေး ပို့လိုက်ပါပြီ။");
   }
 
-  const handleToggleQuickReplies = () => {
-      setShowQuickReplies(prev => !prev);
-  };
+  const handleToggleQuickReplies = () => setShowQuickReplies(prev => !prev);
 
   const handleSendQuickReply = async (message: string) => {
       if (!activeTrip) return;
       await sendMessage(activeTrip.id, message);
       setLastSentMessage(message);
       setShowQuickReplies(false);
-      setTimeout(() => {
-          setLastSentMessage(null);
-      }, 3000); // Hide indicator after 3 seconds
+      setTimeout(() => setLastSentMessage(null), 3000);
   };
 
-  const handleOpenFullChat = () => {
-      setShowQuickReplies(false);
-      setIsChatOpen(true);
-  };
+  const handleOpenFullChat = () => { setShowQuickReplies(false); setIsChatOpen(true); };
 
   const handleCloseCancellationAlert = async () => {
     if (!driverId) return;
     setCancellationAlert({ show: false, fee: null });
     setActiveTrip(null);
     setTripStage(null);
-
-    const driverRef = ref(db, `drivers/${driverId}`);
-    await update(driverRef, { isAvailable: true });
+    await update(ref(db, `drivers/${driverId}`), { isAvailable: true });
   };
 
   if (isAuthenticating || (user && !isDataLoaded)) return <LoadingScreen />;
@@ -522,10 +469,7 @@ const App: React.FC = () => {
           onOpenChat={handleToggleQuickReplies}
           lastSentMessage={lastSentMessage}
           isVisible={onTripUIVisible}
-          onToggleVisibility={() => {
-              setOnTripUIVisible(v => !v);
-              setShowQuickReplies(false);
-          }}
+          onToggleVisibility={() => { setOnTripUIVisible(v => !v); setShowQuickReplies(false); }}
         />
       ) : (
          <Header balance={balance} onProfileClick={() => setShowProfile(true)} onWalletClick={() => setShowEarnings(true)} />
@@ -540,11 +484,11 @@ const App: React.FC = () => {
           onGoOffline={handleGoOffline}
         />
       }
-      {showEarnings && <EarningsModal onClose={() => setShowEarnings(false)} balance={balance} tripHistory={tripHistory} onViewTripDetails={handleViewTripDetails} />}
+      {showEarnings && driverId && <EarningsModal driverId={driverId} onClose={() => setShowEarnings(false)} balance={balance} tripHistory={tripHistory} onViewTripDetails={handleViewTripDetails} />}
       {viewingTripSummary && <TripSummaryModal trip={viewingTripSummary} onClose={handleCloseTripSummary} />}
       {isChatOpen && activeTrip && <ChatModal tripId={activeTrip.id} onClose={() => setIsChatOpen(false)} />}
       {cancellationAlert.show && <CancellationAlertModal fee={cancellationAlert.fee} onClose={handleCloseCancellationAlert} />}
-      {showSOSConfirm && <ConfirmModal title="Emergency Alert" message="Are you sure you want to trigger the emergency alert? This will contact our safety team." onConfirm={handleSOSConfirm} onCancel={() => setShowSOSConfirm(false)} />}
+      {showSOSConfirm && <ConfirmModal title="Emergency Alert" message="Are you sure you want to trigger the emergency alert?" onConfirm={handleSOSConfirm} onCancel={() => setShowSOSConfirm(false)} />}
       {showQuickReplies && activeTrip && <QuickReplyPopup onSend={handleSendQuickReply} onOpenChat={handleOpenFullChat} onClose={() => setShowQuickReplies(false)} />}
 
       {tripRequests.length > 0 && isOnline && !activeTrip && <TripRequestAlert trip={tripRequests[0]} onAccept={handleAcceptTrip} onDecline={handleDeclineTrip} />}
@@ -573,16 +517,11 @@ const App: React.FC = () => {
       {!viewingTripSummary && (
           <div className={`absolute right-4 flex flex-col space-y-3 z-10 transition-all duration-500 ${activeTrip ? 'top-4' : 'top-24'}`}>
               <SOSButton onClick={() => setShowSOSConfirm(true)} />
-              <button
-                  onClick={() => mapRef.current?.recenter()}
-                  className="bg-black/70 p-3 rounded-full shadow-lg border border-gray-700 hover:bg-gray-800"
-                  aria-label="Recenter map"
-              >
+              <button onClick={() => mapRef.current?.recenter()} className="bg-black/70 p-3 rounded-full shadow-lg border border-gray-700 hover:bg-gray-800" aria-label="Recenter map">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="#39FF14" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-green-300"><path d="M12 8V4H8" stroke="none"/><path d="M12 20v-4h4" stroke="none"/><path d="M4 12H8v4" stroke="none"/><path d="M20 12h-4V8" stroke="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><circle cx="12" cy="12" r="3" stroke="none"/></svg>
               </button>
           </div>
       )}
-
       {firestoreError && <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-yellow-500 text-black p-4 rounded-md z-20">{firestoreError}</div>}
       {locationError && <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-red-500 text-white p-2 rounded-md z-20">{locationError}</div>}
     </div>
@@ -590,10 +529,7 @@ const App: React.FC = () => {
 };
 
 const SOSButton: React.FC<{onClick: () => void}> = ({onClick}) => (
-    <button onClick={onClick} className="bg-red-600/80 p-3 rounded-full shadow-lg z-10 border border-red-400 hover:bg-red-500 transition-all animate-pulse">
-        <SOSIcon className="h-6 w-6 text-white" />
-    </button>
+    <button onClick={onClick} className="bg-red-600/80 p-3 rounded-full shadow-lg z-10 border border-red-400 hover:bg-red-500 transition-all animate-pulse"><SOSIcon className="h-6 w-6 text-white" /></button>
 )
-
 
 export default App;

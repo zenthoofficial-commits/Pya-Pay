@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,6 +6,7 @@
     <title>Pyapay Admin Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
     <style>
         :root {
             --bg-dark: #0f172a; --bg-medium: #1e293b; --bg-light: #334155;
@@ -20,21 +20,18 @@
         .btn-primary:hover { background-color: var(--accent-hover); }
         .modal-backdrop { background-color: rgba(0,0,0,0.8); backdrop-filter: blur(4px); }
         
-        /* Mobile Sidebar Handling */
-        @media (max-width: 768px) {
-            .sidebar { position: fixed; height: 100%; z-index: 50; transform: translateX(-100%); }
-            .sidebar.open { transform: translateX(0); }
-        }
-
-        .nav-link { border-left: 4px solid transparent; transition: all 0.2s; }
-        .nav-link:hover { background-color: rgba(255,255,255,0.05); }
-        .nav-link.active { background-color: rgba(16, 185, 129, 0.1); color: var(--accent); border-left-color: var(--accent); }
-        
         /* Map Customization */
         .leaflet-container .leaflet-control-attribution { display: none; }
         .leaflet-tile { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
         .leaflet-popup-content-wrapper { background: #1e293b; color: #fff; border-radius: 8px; }
         .leaflet-popup-tip { background: #1e293b; }
+        .leaflet-routing-container { display: none; }
+
+        .tab-btn.active { border-bottom: 2px solid var(--accent); color: var(--accent); }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--bg-light); border-radius: 4px; }
     </style>
 </head>
 <body class="text-sm h-screen overflow-hidden flex flex-col">
@@ -63,644 +60,334 @@
 
     <!-- Main Application -->
     <div id="dashboard" class="hidden flex h-full relative">
-        
-        <!-- Mobile Overlay -->
-        <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden"></div>
-
-        <!-- Sidebar (Static Width) -->
-        <aside id="sidebar" class="sidebar flex flex-col border-r border-slate-700">
-            <!-- Logo Area -->
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar flex flex-col border-r border-slate-700 hidden md:flex">
             <div class="h-16 flex items-center px-6 border-b border-slate-700 bg-slate-800">
                 <div class="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-slate-900 font-bold text-lg mr-3">P</div>
                 <span class="text-xl font-bold text-white tracking-tight">Pyapay Admin</span>
             </div>
-
-            <!-- Navigation -->
             <nav class="flex-1 overflow-y-auto py-4 space-y-1">
-                <p class="px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Main Menu</p>
-                <a href="#dashboard-view" class="nav-link active flex items-center gap-3 px-6 py-3 text-slate-300">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-                    Dashboard
-                </a>
-                <a href="#drivers-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                    Drivers List
-                </a>
-                <a href="#passengers-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                    Passengers
-                </a>
-                <a href="#trips-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-                    Trips & Revenue
-                </a>
-                <a href="#map-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
-                    Live Map
-                </a>
+                <a href="#dashboard-view" class="nav-link active flex items-center gap-3 px-6 py-3 text-slate-300 hover:bg-slate-800"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>Dashboard</a>
+                <a href="#drivers-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300 hover:bg-slate-800"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>Drivers List</a>
+                <a href="#finance-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300 hover:bg-slate-800"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>Wallet & Finance</a>
+                <a href="#map-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300 hover:bg-slate-800"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>Live Map & Tools</a>
             </nav>
-
             <div class="p-4 border-t border-slate-700 bg-slate-800">
-                <button id="logout-button" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition-colors font-semibold">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                    Sign Out
-                </button>
+                <button id="logout-button" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition-colors font-semibold">Sign Out</button>
             </div>
         </aside>
 
-        <!-- Content Area -->
-        <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-900">
-            <!-- Header -->
-            <header class="h-16 flex items-center justify-between px-6 bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-30">
-                <div class="flex items-center gap-4">
-                    <button id="mobile-menu-btn" class="md:hidden text-slate-400 hover:text-white">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                    </button>
-                    <h2 id="page-title" class="text-xl font-bold text-white">Dashboard Overview</h2>
-                </div>
-                <div class="flex items-center gap-4">
-                    <div class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-700 rounded-full">
-                        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                        <span class="text-xs font-semibold text-white">System Operational</span>
-                    </div>
+        <!-- Content -->
+        <main class="flex-1 flex flex-col min-w-0 bg-slate-900">
+            <header class="h-16 flex items-center justify-between px-6 bg-slate-800/80 backdrop-blur border-b border-slate-700">
+                <h2 id="page-title" class="text-xl font-bold text-white">Dashboard Overview</h2>
+                <div class="flex items-center gap-2 px-3 py-1.5 bg-slate-700 rounded-full">
+                    <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <span class="text-xs font-semibold text-white">System Active</span>
                 </div>
             </header>
 
-            <!-- Scrollable Content -->
-            <div class="flex-1 overflow-auto p-4 md:p-8 scroll-smooth" id="main-scroll">
-                
+            <div class="flex-1 overflow-auto p-6 scroll-smooth">
                 <!-- Dashboard View -->
                 <div id="dashboard-view" class="view-content space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div class="card p-6 rounded-xl shadow-lg border-l-4 border-l-blue-500">
-                            <p class="text-slate-400 text-sm font-semibold uppercase">Total Drivers</p>
-                            <h3 id="stat-drivers" class="text-3xl font-bold text-white mt-1">0</h3>
-                        </div>
-                        <div class="card p-6 rounded-xl shadow-lg border-l-4 border-l-emerald-500">
-                            <p class="text-slate-400 text-sm font-semibold uppercase">Online Now</p>
-                            <h3 id="stat-online" class="text-3xl font-bold text-emerald-400 mt-1">0</h3>
-                        </div>
-                        <div class="card p-6 rounded-xl shadow-lg border-l-4 border-l-amber-500">
-                            <p class="text-slate-400 text-sm font-semibold uppercase">Active Trips</p>
-                            <h3 id="stat-trips" class="text-3xl font-bold text-amber-400 mt-1">0</h3>
-                        </div>
-                        <div class="card p-6 rounded-xl shadow-lg border-l-4 border-l-purple-500">
-                            <p class="text-slate-400 text-sm font-semibold uppercase">Total Completed</p>
-                            <h3 id="stat-completed" class="text-3xl font-bold text-purple-400 mt-1">0</h3>
-                        </div>
-                    </div>
-                    
-                    <div class="card rounded-xl p-6">
-                        <h3 class="text-lg font-bold text-white mb-4">Recent System Activity</h3>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left">
-                                <thead class="text-xs uppercase text-slate-500 bg-slate-800/50">
-                                    <tr><th class="p-3 rounded-l-lg">Time</th><th class="p-3">Type</th><th class="p-3">Details</th><th class="p-3 rounded-r-lg">Status</th></tr>
-                                </thead>
-                                <tbody id="recent-activity-body" class="text-sm divide-y divide-slate-800"></tbody>
-                            </table>
-                        </div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div class="card p-6 rounded-xl shadow-lg border-l-4 border-l-blue-500"><p class="text-slate-400 text-xs font-bold uppercase">Drivers</p><h3 id="stat-drivers" class="text-3xl font-bold text-white mt-1">0</h3></div>
+                        <div class="card p-6 rounded-xl shadow-lg border-l-4 border-l-emerald-500"><p class="text-slate-400 text-xs font-bold uppercase">Online</p><h3 id="stat-online" class="text-3xl font-bold text-emerald-400 mt-1">0</h3></div>
+                        <div class="card p-6 rounded-xl shadow-lg border-l-4 border-l-amber-500"><p class="text-slate-400 text-xs font-bold uppercase">Trips</p><h3 id="stat-trips" class="text-3xl font-bold text-amber-400 mt-1">0</h3></div>
+                        <div class="card p-6 rounded-xl shadow-lg border-l-4 border-l-purple-500"><p class="text-slate-400 text-xs font-bold uppercase">Sys. Balance</p><h3 id="stat-system-balance" class="text-3xl font-bold text-purple-400 mt-1">0</h3></div>
                     </div>
                 </div>
 
-                <!-- Drivers View -->
+                <!-- Drivers List View -->
                 <div id="drivers-view" class="view-content hidden space-y-6">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div class="relative w-full md:w-auto">
-                            <input type="text" id="driver-search" placeholder="Search by name, phone..." class="bg-slate-800 border border-slate-700 text-white text-sm rounded-lg pl-10 pr-4 py-2.5 w-full md:w-64 focus:ring-2 focus:ring-emerald-500">
-                            <svg class="absolute left-3 top-3 h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                        </div>
-                        <button id="add-driver-btn" class="btn-primary py-2.5 px-5 rounded-lg flex items-center gap-2 shadow-lg shadow-emerald-500/20 w-full md:w-auto justify-center">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                            Add New Driver
-                        </button>
+                    <div class="flex justify-between">
+                        <input type="text" id="driver-search" placeholder="Search..." class="bg-slate-800 border-slate-700 text-white rounded-lg px-4 py-2">
+                        <button onclick="document.getElementById('add-driver-modal').classList.remove('hidden')" class="btn-primary py-2 px-4 rounded-lg">Add Driver</button>
                     </div>
                     <div class="card rounded-xl overflow-hidden shadow-xl">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left">
-                                <thead class="bg-slate-800 text-xs uppercase text-slate-400 font-bold">
-                                    <tr>
-                                        <th class="p-4">Profile</th>
-                                        <th class="p-4">Contact</th>
-                                        <th class="p-4">Vehicle Info</th>
-                                        <th class="p-4">Status</th>
-                                        <th class="p-4 text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="drivers-table" class="divide-y divide-slate-700 text-sm"></tbody>
-                            </table>
+                        <table class="w-full text-left text-white"><tbody id="drivers-table" class="divide-y divide-slate-700"></tbody></table>
+                    </div>
+                </div>
+
+                <!-- Finance View -->
+                <div id="finance-view" class="view-content hidden space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                         <div class="card p-4 rounded-xl"><p class="text-xs text-slate-400 uppercase">Driver Wallets Total</p><p id="total-wallet-holdings" class="text-2xl font-bold text-white">0 MMK</p></div>
+                         <div class="card p-4 rounded-xl"><p class="text-xs text-slate-400 uppercase">Platform Profit (Est. 14%)</p><p id="platform-profit" class="text-2xl font-bold text-emerald-400">0 MMK</p></div>
+                         <div class="card p-4 rounded-xl"><p class="text-xs text-slate-400 uppercase">Transactions Today</p><p id="today-tx-count" class="text-2xl font-bold text-blue-400">0</p></div>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="card rounded-xl overflow-hidden h-[600px] flex flex-col">
+                            <div class="p-4 bg-slate-800 border-b border-slate-700"><h3 class="font-bold text-white">Driver Wallets</h3></div>
+                            <div class="overflow-auto flex-1"><table class="w-full text-left text-white"><tbody id="wallet-table" class="divide-y divide-slate-700"></tbody></table></div>
+                        </div>
+                         <div class="card rounded-xl overflow-hidden h-[600px] flex flex-col">
+                            <div class="p-4 bg-slate-800 border-b border-slate-700"><h3 class="font-bold text-white">Recent Transactions</h3></div>
+                            <div class="overflow-auto flex-1"><table class="w-full text-left text-white"><tbody id="transactions-log-table" class="divide-y divide-slate-700"></tbody></table></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Passengers View -->
-                <div id="passengers-view" class="view-content hidden space-y-6">
-                    <div class="card rounded-xl overflow-hidden shadow-xl">
-                        <table class="w-full text-left">
-                            <thead class="bg-slate-800 text-xs uppercase text-slate-400 font-bold">
-                                <tr>
-                                    <th class="p-4">Passenger Name</th>
-                                    <th class="p-4">Phone Number</th>
-                                    <th class="p-4">UID</th>
-                                    <th class="p-4 text-right">Details</th>
-                                </tr>
-                            </thead>
-                            <tbody id="passengers-table" class="divide-y divide-slate-700 text-sm"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Trips View -->
-                <div id="trips-view" class="view-content hidden space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
-                            <p class="text-xs text-slate-400 uppercase">Total Revenue (Est.)</p>
-                            <p id="total-revenue" class="text-2xl font-bold text-green-400">0 MMK</p>
-                        </div>
-                    </div>
-                    <div class="card rounded-xl overflow-hidden shadow-xl">
-                        <table class="w-full text-left">
-                            <thead class="bg-slate-800 text-xs uppercase text-slate-400 font-bold">
-                                <tr>
-                                    <th class="p-4">Date</th>
-                                    <th class="p-4">Route</th>
-                                    <th class="p-4">Driver / Passenger</th>
-                                    <th class="p-4">Fare</th>
-                                    <th class="p-4">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="trips-table" class="divide-y divide-slate-700 text-sm"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Map View -->
+                <!-- Live Map View -->
                 <div id="map-view" class="view-content hidden h-full flex flex-col">
-                    <div class="card rounded-xl border-0 overflow-hidden shadow-xl flex-1 relative h-[600px] md:h-full">
+                     <div class="card rounded-xl border-0 overflow-hidden shadow-xl flex-1 relative h-[600px] md:h-full">
                         <div id="admin-map" class="absolute inset-0 z-10 bg-slate-800"></div>
-                        <div class="absolute top-4 right-4 z-20 bg-slate-900/90 backdrop-blur p-4 rounded-xl border border-slate-700 shadow-xl w-48">
-                            <h4 class="text-xs font-bold text-slate-400 uppercase mb-3">Map Legend</h4>
-                            <div class="flex items-center gap-3 mb-2">
-                                <span class="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></span>
-                                <span class="text-sm font-medium">Available</span>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <span class="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]"></span>
-                                <span class="text-sm font-medium">Busy / On Trip</span>
-                            </div>
+                        <!-- Tools -->
+                        <div class="absolute top-4 left-4 z-20 flex flex-col gap-2">
+                             <button id="map-recenter-btn" class="bg-slate-900/90 text-white p-2 rounded-lg border border-slate-700 shadow hover:bg-slate-800" title="Recenter Admin"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></button>
+                             <button id="map-measure-btn" class="bg-slate-900/90 text-white p-2 rounded-lg border border-slate-700 shadow hover:bg-slate-800" title="Measure Trip"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg></button>
                         </div>
-                    </div>
+                        <!-- Measure Result Box -->
+                         <div id="measure-info" class="absolute top-4 left-16 z-20 bg-slate-900/95 text-white p-3 rounded-lg border border-emerald-500 shadow-xl hidden w-64">
+                            <div class="flex justify-between items-center border-b border-slate-700 pb-1 mb-2"><span class="text-xs font-bold text-emerald-400">MEASUREMENT TOOL</span><button onclick="resetMeasure()" class="text-xs text-red-400">&times;</button></div>
+                            <div id="measure-results"></div>
+                        </div>
+                     </div>
                 </div>
-
             </div>
         </main>
     </div>
 
     <!-- Modals -->
-    
-    <!-- Add Driver Modal -->
     <div id="add-driver-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
-        <div class="bg-slate-800 rounded-xl shadow-2xl w-full max-w-2xl border border-slate-700 flex flex-col max-h-[90vh]">
-            <div class="p-6 border-b border-slate-700 flex justify-between items-center">
-                <h3 class="text-xl font-bold text-white">Create New Driver Account</h3>
-                <button onclick="closeModal('add-driver-modal')" class="text-slate-400 hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-            </div>
-            <div class="p-6 overflow-y-auto">
-                <form id="add-driver-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="md:col-span-2"><h4 class="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">Personal Information</h4></div>
-                    <input name="name" type="text" required placeholder="Full Name" class="bg-slate-900 border border-slate-700 rounded p-2.5 text-white focus:ring-1 focus:ring-emerald-500">
-                    <input name="dob" type="date" required class="bg-slate-900 border border-slate-700 rounded p-2.5 text-white focus:ring-1 focus:ring-emerald-500">
-                    <input name="phone" type="tel" required placeholder="Phone Number" class="bg-slate-900 border border-slate-700 rounded p-2.5 text-white focus:ring-1 focus:ring-emerald-500">
-                    <input name="address" type="text" required placeholder="Address" class="bg-slate-900 border border-slate-700 rounded p-2.5 text-white focus:ring-1 focus:ring-emerald-500">
-                    
-                    <div class="md:col-span-2 mt-2"><h4 class="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">Vehicle Details</h4></div>
-                    <input name="carModel" type="text" required placeholder="Car Model (e.g. Toyota Aqua)" class="bg-slate-900 border border-slate-700 rounded p-2.5 text-white focus:ring-1 focus:ring-emerald-500">
-                    <input name="carPlate" type="text" required placeholder="License Plate (e.g. 1A-1234)" class="bg-slate-900 border border-slate-700 rounded p-2.5 text-white focus:ring-1 focus:ring-emerald-500">
-
-                    <div class="md:col-span-2 mt-2"><h4 class="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">Account Credentials</h4></div>
-                    <input name="email" type="email" required placeholder="Email" class="bg-slate-900 border border-slate-700 rounded p-2.5 text-white focus:ring-1 focus:ring-emerald-500">
-                    <input name="password" type="password" required placeholder="Password (Min 6 chars)" minlength="6" class="bg-slate-900 border border-slate-700 rounded p-2.5 text-white focus:ring-1 focus:ring-emerald-500">
-                    
-                    <p id="modal-error" class="text-red-400 text-sm col-span-2 hidden"></p>
-                    
-                    <div class="md:col-span-2 flex justify-end gap-3 mt-4 pt-4 border-t border-slate-700">
-                        <button type="button" onclick="closeModal('add-driver-modal')" class="px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition">Cancel</button>
-                        <button type="submit" class="px-6 py-2 btn-primary rounded-lg shadow-lg shadow-emerald-500/20">Create Driver</button>
-                    </div>
-                </form>
-            </div>
+        <div class="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-700 p-6">
+            <h3 class="text-xl font-bold text-white mb-4">Add Driver</h3>
+            <form id="add-driver-form" class="space-y-4">
+                <input name="name" type="text" placeholder="Name" class="w-full bg-slate-900 border-slate-700 rounded p-2 text-white" required>
+                <input name="email" type="email" placeholder="Email" class="w-full bg-slate-900 border-slate-700 rounded p-2 text-white" required>
+                <input name="password" type="password" placeholder="Password" class="w-full bg-slate-900 border-slate-700 rounded p-2 text-white" required>
+                <input name="phone" type="text" placeholder="Phone" class="w-full bg-slate-900 border-slate-700 rounded p-2 text-white" required>
+                <input name="carModel" type="text" placeholder="Car Model" class="w-full bg-slate-900 border-slate-700 rounded p-2 text-white" required>
+                <input name="carPlate" type="text" placeholder="Car Plate" class="w-full bg-slate-900 border-slate-700 rounded p-2 text-white" required>
+                <input name="address" type="text" placeholder="Address" class="w-full bg-slate-900 border-slate-700 rounded p-2 text-white" required>
+                <div class="flex justify-end gap-2"><button type="button" onclick="document.getElementById('add-driver-modal').classList.add('hidden')" class="px-4 py-2 text-slate-300">Cancel</button><button type="submit" class="btn-primary px-4 py-2 rounded">Create</button></div>
+            </form>
         </div>
     </div>
 
-    <!-- View Details Modal -->
+    <!-- Topup/Withdraw Modal -->
+    <div id="money-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-slate-800 rounded-xl w-full max-w-sm border border-slate-700 p-6">
+            <h3 id="money-modal-title" class="text-xl font-bold text-white mb-2">Transaction</h3>
+            <form id="money-form" class="space-y-4">
+                <input type="hidden" id="money-driver-id"><input type="hidden" id="money-type">
+                <input id="money-amount" type="number" placeholder="Amount (MMK)" class="w-full bg-slate-900 border-slate-700 rounded p-2 text-white" required>
+                <input id="money-note" type="text" placeholder="Note (e.g. KPay ID)" class="w-full bg-slate-900 border-slate-700 rounded p-2 text-white" required>
+                <div class="flex justify-end gap-2"><button type="button" onclick="document.getElementById('money-modal').classList.add('hidden')" class="px-4 py-2 text-slate-300">Cancel</button><button type="submit" class="btn-primary px-4 py-2 rounded">Confirm</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Driver Details Modal -->
     <div id="details-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
-        <div class="bg-slate-800 rounded-xl shadow-2xl w-full max-w-lg border border-slate-700 flex flex-col max-h-[90vh]">
-            <div class="p-6 border-b border-slate-700 flex justify-between items-center">
-                <h3 id="details-title" class="text-xl font-bold text-white">Details</h3>
-                <button onclick="closeModal('details-modal')" class="text-slate-400 hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-            </div>
-            <div id="details-content" class="p-6 overflow-y-auto text-slate-300 space-y-4">
-                <!-- Content injected via JS -->
-            </div>
-            <div class="p-4 border-t border-slate-700 flex justify-end">
-                <button onclick="closeModal('details-modal')" class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600">Close</button>
-            </div>
+        <div class="bg-slate-800 rounded-xl w-full max-w-2xl border border-slate-700 flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b border-slate-700 flex justify-between"><h3 id="details-title" class="text-xl font-bold text-white">Details</h3><button onclick="document.getElementById('details-modal').classList.add('hidden')" class="text-white">&times;</button></div>
+            <div class="flex border-b border-slate-700"><button onclick="switchTab('profile')" class="tab-btn active flex-1 py-3 text-slate-300">Profile</button><button onclick="switchTab('finance')" class="tab-btn flex-1 py-3 text-slate-300">History & Finance</button></div>
+            <div id="modal-content" class="p-6 overflow-y-auto flex-1"></div>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getDatabase, ref, onValue, set, get, query, orderByChild } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+        import { getDatabase, ref, onValue, set, get, remove, update, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-        // Firebase Config
-        const firebaseConfig = { apiKey: "AIzaSyB7zSpZMYgS2SChtyFrUvvp0txPutecF3g", authDomain: "zenstride.firebaseapp.com", databaseURL: "https://zenstride-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "zenstride", storageBucket: "zenstride.appspot.com", messagingSenderId: "588697035765", appId: "1:588697035765:web:9411ea5aa9588ceb7d36bc" };
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getDatabase(app);
+        const config = { apiKey: "AIzaSyB7zSpZMYgS2SChtyFrUvvp0txPutecF3g", authDomain: "zenstride.firebaseapp.com", databaseURL: "https://zenstride-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "zenstride" };
+        const app = initializeApp(config); const auth = getAuth(app); const db = getDatabase(app);
+        
+        let allDrivers = {}, activeDriverId = null, map, adminMarker, measureControl, measureStart, measureEnd;
 
-        // Global State
-        let map, markers = {};
-        const dom = {
-            loginScreen: document.getElementById('login-screen'),
-            dashboard: document.getElementById('dashboard'),
-            loginForm: document.getElementById('login-form'),
-            navLinks: document.querySelectorAll('.nav-link'),
-            views: document.querySelectorAll('.view-content'),
-            pageTitle: document.getElementById('page-title'),
-            sidebar: document.getElementById('sidebar'),
-            mobileMenuBtn: document.getElementById('mobile-menu-btn'),
-            overlay: document.getElementById('sidebar-overlay')
-        };
-
-        // --- Auth Logic ---
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const adminRef = ref(db, `admins/${user.uid}`);
-                try {
-                    const snap = await get(adminRef);
-                    if (snap.exists()) {
-                        dom.loginScreen.classList.add('hidden');
-                        dom.dashboard.classList.remove('hidden');
-                        initDataListeners();
-                    } else {
-                        throw new Error("Not an admin");
-                    }
-                } catch (e) {
-                    await signOut(auth);
-                    alert("Access Denied: You are not an administrator.");
-                }
-            } else {
-                dom.loginScreen.classList.remove('hidden');
-                dom.dashboard.classList.add('hidden');
-            }
+        // Auth
+        onAuthStateChanged(auth, async u => {
+            if(u && (await get(ref(db, `admins/${u.uid}`))).exists()) {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                initData();
+            } else { document.getElementById('login-screen').classList.remove('hidden'); }
         });
 
-        dom.loginForm.addEventListener('submit', (e) => {
+        document.getElementById('login-form').onsubmit = e => { e.preventDefault(); signInWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('password').value).catch(alert); };
+        document.getElementById('logout-button').onclick = () => signOut(auth);
+
+        // Nav
+        document.querySelectorAll('.nav-link').forEach(l => l.onclick = e => {
             e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            signInWithEmailAndPassword(auth, email, password).catch(err => {
-                const el = document.getElementById('login-error');
-                el.innerText = err.message; el.classList.remove('hidden');
-            });
+            document.querySelectorAll('.view-content').forEach(v => v.classList.add('hidden'));
+            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active', 'bg-slate-800'));
+            l.classList.add('active', 'bg-slate-800');
+            const target = l.getAttribute('href').substring(1);
+            document.getElementById(target).classList.remove('hidden');
+            if(target === 'map-view') setTimeout(() => { if(!map) initMap(); else map.invalidateSize(); }, 200);
         });
 
-        document.getElementById('logout-button').addEventListener('click', () => signOut(auth));
-
-        // --- Navigation Logic ---
-        function switchView(targetId, title) {
-            dom.views.forEach(v => v.classList.add('hidden'));
-            document.getElementById(targetId).classList.remove('hidden');
-            dom.pageTitle.innerText = title;
-            
-            // Close mobile menu
-            dom.sidebar.classList.remove('open');
-            dom.overlay.classList.add('hidden');
-
-            if (targetId === 'map-view') {
-                setTimeout(() => {
-                    if(!map) initMap();
-                    else map.invalidateSize();
-                }, 100);
-            }
-        }
-
-        dom.navLinks.forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                dom.navLinks.forEach(l => l.classList.remove('active'));
-                link.classList.add('active');
-                const target = link.getAttribute('href').substring(1);
-                switchView(target, link.innerText.trim());
+        // Data
+        function initData() {
+            onValue(ref(db, 'drivers'), s => {
+                allDrivers = s.val() || {};
+                document.getElementById('stat-drivers').innerText = Object.keys(allDrivers).length;
+                renderDrivers(); renderWallet();
+                let total = 0; Object.values(allDrivers).forEach(d => total += (d.walletBalance || 0));
+                document.getElementById('stat-system-balance').innerText = total.toLocaleString() + ' MMK';
+                document.getElementById('total-wallet-holdings').innerText = total.toLocaleString() + ' MMK';
             });
-        });
-
-        // Mobile Menu
-        dom.mobileMenuBtn.addEventListener('click', () => {
-            dom.sidebar.classList.add('open');
-            dom.overlay.classList.remove('hidden');
-        });
-        dom.overlay.addEventListener('click', () => {
-            dom.sidebar.classList.remove('open');
-            dom.overlay.classList.add('hidden');
-        });
-
-        // --- Data Handling ---
-        function initDataListeners() {
-            // Drivers
-            onValue(ref(db, 'drivers'), snap => {
-                const drivers = snap.val() || {};
-                document.getElementById('stat-drivers').innerText = Object.keys(drivers).length;
-                renderDriversTable(drivers);
-            });
-
-            // Locations (Map & Online Stat)
-            onValue(ref(db, 'driverLocations'), snap => {
-                const locs = snap.val() || {};
-                document.getElementById('stat-online').innerText = Object.keys(locs).length;
-                updateMapMarkers(locs);
-            });
-
-            // Trips
-            onValue(ref(db, 'trips'), snap => {
-                const trips = snap.val() || {};
-                const active = Object.values(trips).filter(t => ['accepted', 'at_pickup', 'to_dropoff'].includes(t.status)).length;
-                document.getElementById('stat-trips').innerText = active;
-                renderTripsTable(trips);
-                renderRecentActivity(trips);
-            });
-
-            // Passengers
-            onValue(ref(db, 'passengers'), snap => renderPassengersTable(snap.val() || {}));
-            
-            // Completed Stats
-             onValue(ref(db, 'completedTrips'), snap => {
-                let count = 0;
-                if(snap.exists()) snap.forEach(d => count += Object.keys(d.val()).length);
-                document.getElementById('stat-completed').innerText = count;
+            onValue(ref(db, 'driverLocations'), s => document.getElementById('stat-online').innerText = Object.keys(s.val()||{}).length);
+            onValue(ref(db, 'trips'), s => document.getElementById('stat-trips').innerText = Object.values(s.val()||{}).filter(t=>['accepted','at_pickup','to_dropoff'].includes(t.status)).length);
+            onValue(ref(db, 'transactions'), s => renderTransactions(s.val()||{}));
+            onValue(ref(db, 'completedTrips'), s => {
+                 let profit = 0;
+                 if(s.exists()) s.forEach(d => d.forEach(t => profit += (t.val().fare || 0) * 0.14));
+                 document.getElementById('platform-profit').innerText = Math.round(profit).toLocaleString() + ' MMK';
             });
         }
 
-        // --- Render Functions ---
-        function renderDriversTable(drivers) {
-            const tbody = document.getElementById('drivers-table');
-            tbody.innerHTML = '';
-            
-            // Filter logic could go here
-            const term = document.getElementById('driver-search').value.toLowerCase();
-            
-            Object.entries(drivers).forEach(([uid, d]) => {
-                if(term && !d.name.toLowerCase().includes(term) && !d.phone.includes(term)) return;
-
-                const statusBadge = d.isOnline 
-                    ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Online</span>`
-                    : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-700 text-slate-400">Offline</span>`;
-
-                const row = document.createElement('tr');
-                row.className = 'border-b border-slate-800 hover:bg-slate-800/50 transition';
-                row.innerHTML = `
-                    <td class="p-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg bg-slate-700 flex items-center justify-center text-lg font-bold text-slate-300">${d.name.charAt(0)}</div>
-                            <div>
-                                <div class="font-medium text-white">${d.name}</div>
-                                <div class="text-xs text-slate-500">${d.email}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="p-4 text-slate-300">${d.phone}</td>
-                    <td class="p-4">
-                        <div class="text-white text-sm">${d.carPlate}</div>
-                        <div class="text-xs text-slate-500">${d.carModel}</div>
-                    </td>
-                    <td class="p-4">${statusBadge}</td>
-                    <td class="p-4 text-right">
-                        <button class="view-driver-btn text-emerald-400 hover:text-emerald-300 text-sm font-medium hover:underline" data-uid="${uid}">View Details</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-            
-            document.querySelectorAll('.view-driver-btn').forEach(btn => {
-                btn.onclick = () => showDriverDetails(btn.dataset.uid, drivers[btn.dataset.uid]);
+        function renderDrivers() {
+            const tbody = document.getElementById('drivers-table'); tbody.innerHTML = '';
+            Object.entries(allDrivers).forEach(([uid, d]) => {
+                if(document.getElementById('driver-search').value && !d.name.toLowerCase().includes(document.getElementById('driver-search').value)) return;
+                tbody.innerHTML += `<tr class="border-b border-slate-700 hover:bg-slate-800"><td class="p-3"><div class="font-bold">${d.name}</div><div class="text-xs text-slate-500">${d.carPlate}</div></td><td class="p-3">${d.phone}</td><td class="p-3"><span class="px-2 py-0.5 rounded text-xs ${d.isOnline?'bg-emerald-500/20 text-emerald-400':'bg-slate-700 text-slate-400'}">${d.isOnline?'Online':'Offline'}</span></td><td class="p-3 text-right"><button class="text-emerald-400 text-xs font-bold" onclick="window.openDetails('${uid}')">Manage</button></td></tr>`;
             });
         }
-        
-        document.getElementById('driver-search').addEventListener('input', () => {
-             get(ref(db, 'drivers')).then(s => renderDriversTable(s.val() || {}));
-        });
+        document.getElementById('driver-search').oninput = renderDrivers;
 
-        function renderPassengersTable(passengers) {
-            const tbody = document.getElementById('passengers-table');
-            tbody.innerHTML = '';
-            Object.entries(passengers).forEach(([uid, p]) => {
-                const row = document.createElement('tr');
-                row.className = 'border-b border-slate-800 hover:bg-slate-800/50';
-                row.innerHTML = `
-                    <td class="p-4 font-medium text-white">${p.name}</td>
-                    <td class="p-4 text-slate-300">${p.phone}</td>
-                    <td class="p-4 text-xs font-mono text-slate-500">${uid}</td>
-                    <td class="p-4 text-right">
-                         <button class="view-passenger-btn text-emerald-400 hover:text-emerald-300 text-sm font-medium hover:underline" data-uid="${uid}">History</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-             document.querySelectorAll('.view-passenger-btn').forEach(btn => {
-                btn.onclick = () => showPassengerDetails(btn.dataset.uid, passengers[btn.dataset.uid]);
+        function renderWallet() {
+            const tbody = document.getElementById('wallet-table'); tbody.innerHTML = '';
+            Object.entries(allDrivers).forEach(([uid, d]) => {
+                 tbody.innerHTML += `<tr class="border-b border-slate-700"><td class="p-3"><div class="font-bold">${d.name}</div><div class="text-xs text-slate-500">${d.phone}</div></td><td class="p-3 font-mono font-bold ${d.walletBalance<1000?'text-red-400':'text-white'}">${(d.walletBalance||0).toLocaleString()}</td><td class="p-3 text-right"><button onclick="window.openMoney('${uid}','credit')" class="bg-emerald-600 px-2 py-1 rounded text-xs mr-1">TopUp</button><button onclick="window.openMoney('${uid}','debit')" class="bg-red-600 px-2 py-1 rounded text-xs">Withdraw</button></td></tr>`;
             });
         }
 
-        function renderTripsTable(trips) {
-            const tbody = document.getElementById('trips-table');
-            tbody.innerHTML = '';
-            const sorted = Object.entries(trips).map(([id, t]) => ({id, ...t})).sort((a,b) => b.createdAt - a.createdAt).slice(0, 50);
-            
-            let totalRev = 0;
-
-            sorted.forEach(trip => {
-                const statusColors = { pending: 'text-yellow-400', accepted: 'text-blue-400', at_pickup: 'text-cyan-400', to_dropoff: 'text-amber-400', completed: 'text-emerald-400', cancelled: 'text-red-400' };
-                totalRev += (trip.status === 'completed' ? (trip.fare || 0) : 0);
-                
-                tbody.innerHTML += `
-                    <tr class="border-b border-slate-800 hover:bg-slate-800/50">
-                        <td class="p-4 text-xs text-slate-400">${new Date(trip.createdAt).toLocaleString()}</td>
-                        <td class="p-4">
-                            <div class="flex flex-col gap-1">
-                                <span class="text-xs text-slate-400">From: <span class="text-slate-200">${trip.pickupAddress ? trip.pickupAddress.split(',')[0] : '...'}</span></span>
-                                <span class="text-xs text-slate-400">To: <span class="text-slate-200">${trip.dropoffAddress ? trip.dropoffAddress.split(',')[0] : '...'}</span></span>
-                            </div>
-                        </td>
-                        <td class="p-4 text-xs">
-                             <div class="text-slate-300">D: ${trip.driverId ? 'Assigned' : 'Pending'}</div>
-                             <div class="text-slate-400">P: ${trip.passengerPhone}</div>
-                        </td>
-                        <td class="p-4 font-mono font-bold text-white">${trip.fare} Ks</td>
-                        <td class="p-4 font-bold text-xs uppercase ${statusColors[trip.status] || 'text-slate-500'}">${trip.status}</td>
-                    </tr>
-                `;
-            });
-            document.getElementById('total-revenue').innerText = `${totalRev.toLocaleString()} MMK`;
-        }
-        
-        function renderRecentActivity(trips) {
-            const tbody = document.getElementById('recent-activity-body');
-            tbody.innerHTML = '';
-            const sorted = Object.entries(trips).map(([id, t]) => ({id, ...t})).sort((a,b) => b.createdAt - a.createdAt).slice(0, 5);
-            sorted.forEach(t => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td class="p-3 text-xs text-slate-400 font-mono">${new Date(t.createdAt).toLocaleTimeString()}</td>
-                        <td class="p-3 text-xs font-bold text-white">New Trip</td>
-                        <td class="p-3 text-xs text-slate-300">Request from ${t.passengerPhone}</td>
-                        <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-300">${t.status}</span></td>
-                    </tr>
-                `;
+        function renderTransactions(txs) {
+            const tbody = document.getElementById('transactions-log-table'); tbody.innerHTML = '';
+            const arr = Object.values(txs).sort((a,b) => b.timestamp - a.timestamp);
+            document.getElementById('today-tx-count').innerText = arr.filter(t => new Date(t.timestamp).toDateString() === new Date().toDateString()).length;
+            arr.slice(0,50).forEach(t => {
+                const driver = allDrivers[t.driverId] ? allDrivers[t.driverId].name : 'Unknown';
+                tbody.innerHTML += `<tr class="border-b border-slate-700"><td class="p-3"><div>${driver}</div><div class="text-xs text-slate-500">${new Date(t.timestamp).toLocaleTimeString()}</div></td><td class="p-3"><div class="text-xs font-bold uppercase ${t.type==='credit'?'text-emerald-400':'text-red-400'}">${t.type}</div><div class="text-xs text-slate-400">${t.note}</div></td><td class="p-3 font-mono text-right font-bold">${t.amount.toLocaleString()}</td></tr>`;
             });
         }
 
-        // --- Modals ---
-        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
-        
-        function showDriverDetails(uid, data) {
-            const modal = document.getElementById('details-modal');
-            const content = document.getElementById('details-content');
-            document.getElementById('details-title').innerText = "Driver Details";
-            
-            content.innerHTML = `
-                <div class="flex items-center gap-4 mb-6">
-                    <div class="w-16 h-16 rounded-full bg-slate-700 flex items-center justify-center text-3xl font-bold text-white">${data.name.charAt(0)}</div>
-                    <div>
-                        <h2 class="text-2xl font-bold text-white">${data.name}</h2>
-                        <p class="text-emerald-400 font-mono">${data.isOnline ? '● Online' : '○ Offline'}</p>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-4 text-sm">
-                    <div class="bg-slate-700/50 p-3 rounded-lg">
-                        <p class="text-xs text-slate-400 uppercase">Email</p>
-                        <p class="text-white">${data.email}</p>
-                    </div>
-                    <div class="bg-slate-700/50 p-3 rounded-lg">
-                        <p class="text-xs text-slate-400 uppercase">Phone</p>
-                        <p class="text-white">${data.phone}</p>
-                    </div>
-                     <div class="bg-slate-700/50 p-3 rounded-lg">
-                        <p class="text-xs text-slate-400 uppercase">Car Model</p>
-                        <p class="text-white">${data.carModel}</p>
-                    </div>
-                     <div class="bg-slate-700/50 p-3 rounded-lg">
-                        <p class="text-xs text-slate-400 uppercase">Plate Number</p>
-                        <p class="text-emerald-400 font-mono font-bold">${data.carPlate}</p>
-                    </div>
-                    <div class="bg-slate-700/50 p-3 rounded-lg col-span-2">
-                        <p class="text-xs text-slate-400 uppercase">Address</p>
-                        <p class="text-white">${data.address}</p>
-                    </div>
-                </div>
-                <div class="mt-6 flex gap-3">
-                    <button class="flex-1 bg-red-500/10 text-red-400 py-2 rounded-lg hover:bg-red-500 hover:text-white transition font-bold text-xs uppercase" onclick="alert('Feature coming soon')">Ban Driver</button>
-                    <button class="flex-1 bg-blue-500/10 text-blue-400 py-2 rounded-lg hover:bg-blue-500 hover:text-white transition font-bold text-xs uppercase" onclick="alert('Feature coming soon')">Edit Info</button>
-                </div>
-            `;
-            modal.classList.remove('hidden');
-        }
-
-        function showPassengerDetails(uid, data) {
-             const modal = document.getElementById('details-modal');
-             document.getElementById('details-title').innerText = "Passenger Details";
-             document.getElementById('details-content').innerHTML = `
-                <div class="text-center mb-6">
-                    <div class="w-20 h-20 mx-auto rounded-full bg-slate-700 flex items-center justify-center text-4xl font-bold text-white mb-3">${data.name.charAt(0)}</div>
-                    <h2 class="text-2xl font-bold text-white">${data.name}</h2>
-                    <p class="text-slate-400">${data.phone}</p>
-                </div>
-                <div class="bg-slate-700/30 p-4 rounded-lg border border-slate-700">
-                    <p class="text-center text-slate-400 text-sm">User ID: <span class="font-mono text-white">${uid}</span></p>
-                </div>
-             `;
-             modal.classList.remove('hidden');
-        }
-
-        // Add Driver Logic
-        document.getElementById('add-driver-btn').onclick = () => {
-            document.getElementById('add-driver-modal').classList.remove('hidden');
-            document.getElementById('add-driver-form').reset();
-        };
-
-        document.getElementById('add-driver-form').onsubmit = async (e) => {
+        // Add Driver
+        document.getElementById('add-driver-form').onsubmit = async e => {
             e.preventDefault();
-            const f = new FormData(e.target);
-            const data = Object.fromEntries(f.entries());
-            data.isOnline = false; data.isAvailable = false; data.createdAt = new Date().toISOString();
-            
+            const fd = new FormData(e.target); const d = Object.fromEntries(fd);
             try {
-                // Create user logic (simulated secondary app)
-                const tempApp = initializeApp(firebaseConfig, `temp-${Date.now()}`);
-                const tempAuth = getAuth(tempApp);
-                const cred = await createUserWithEmailAndPassword(tempAuth, data.email, data.password);
-                delete data.password;
-                await set(ref(db, `drivers/${cred.user.uid}`), data);
-                await signOut(tempAuth);
-                closeModal('add-driver-modal');
-                alert("Driver Created Successfully");
-            } catch(err) {
-                document.getElementById('modal-error').innerText = err.message;
-                document.getElementById('modal-error').classList.remove('hidden');
-            }
+                const ta = getAuth(initializeApp(config, `temp-${Date.now()}`));
+                const uc = await createUserWithEmailAndPassword(ta, d.email, d.password);
+                delete d.password; d.isOnline = false; d.walletBalance = 0;
+                await set(ref(db, `drivers/${uc.user.uid}`), d);
+                document.getElementById('add-driver-modal').classList.add('hidden'); e.target.reset();
+            } catch(err) { alert(err.message); }
         };
 
-        // --- Map Logic ---
+        // Money Modal
+        window.openMoney = (uid, type) => {
+            document.getElementById('money-modal').classList.remove('hidden');
+            document.getElementById('money-modal-title').innerText = type === 'credit' ? 'Top Up Wallet' : 'Withdraw / Deduct';
+            document.getElementById('money-driver-id').value = uid;
+            document.getElementById('money-type').value = type;
+            document.getElementById('money-amount').value = '';
+        };
+
+        document.getElementById('money-form').onsubmit = async e => {
+            e.preventDefault();
+            const uid = document.getElementById('money-driver-id').value;
+            const type = document.getElementById('money-type').value;
+            const amt = parseInt(document.getElementById('money-amount').value);
+            const note = document.getElementById('money-note').value;
+            const cur = (allDrivers[uid].walletBalance || 0);
+            if(type === 'debit' && cur < amt) return alert('Insufficient funds');
+            await update(ref(db, `drivers/${uid}`), { walletBalance: type==='credit' ? cur+amt : cur-amt });
+            await push(ref(db, 'transactions'), { driverId: uid, amount: amt, type, note, timestamp: serverTimestamp() });
+            document.getElementById('money-modal').classList.add('hidden');
+        };
+
+        // Details Modal
+        window.openDetails = (uid) => {
+            activeDriverId = uid;
+            document.getElementById('details-modal').classList.remove('hidden');
+            document.getElementById('details-title').innerText = allDrivers[uid].name;
+            switchTab('profile');
+        }
+        
+        window.switchTab = async (tab) => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            const content = document.getElementById('modal-content');
+            const d = allDrivers[activeDriverId];
+            
+            if(tab === 'profile') {
+                content.innerHTML = `<div class="space-y-4 text-white"><p><strong>Email:</strong> ${d.email}</p><p><strong>Phone:</strong> ${d.phone}</p><p><strong>Car:</strong> ${d.carModel} (${d.carPlate})</p><p><strong>Address:</strong> ${d.address}</p><button onclick="window.removeDriver('${activeDriverId}')" class="w-full bg-red-600 py-3 rounded font-bold mt-4">BAN / REMOVE DRIVER</button></div>`;
+            } else {
+                content.innerHTML = '<p class="text-center text-slate-400">Loading...</p>';
+                const s = await get(ref(db, `completedTrips/${activeDriverId}`));
+                let h = `<div class="mb-4 p-4 bg-slate-700 rounded flex justify-between items-center"><div><span class="text-xs text-slate-400">Balance</span><h2 class="text-2xl font-bold text-white">${(d.walletBalance||0).toLocaleString()}</h2></div><div class="space-x-2"><button onclick="window.openMoney('${activeDriverId}','credit')" class="bg-emerald-600 px-3 py-1 rounded text-xs">TopUp</button><button onclick="window.openMoney('${activeDriverId}','debit')" class="bg-red-600 px-3 py-1 rounded text-xs">Withdraw</button></div></div><div class="space-y-2">`;
+                const trips = []; if(s.exists()) s.forEach(t => trips.push(t.val()));
+                trips.sort((a,b)=>b.completedAt-a.completedAt).forEach(t => {
+                    h += `<div class="bg-slate-800 p-2 rounded flex justify-between text-xs text-white"><div><div>${new Date(t.completedAt).toLocaleDateString()}</div><div class="text-slate-400">${t.pickupAddress.split(',')[0]} -> ${t.dropoffAddress.split(',')[0]}</div></div><div class="text-right font-bold text-emerald-400">+${t.fare.toLocaleString()}</div></div>`;
+                });
+                content.innerHTML = h + '</div>';
+            }
+        }
+
+        window.removeDriver = async uid => {
+            if(confirm('Are you sure? This action is permanent.')) {
+                await remove(ref(db, `drivers/${uid}`));
+                await remove(ref(db, `driverLocations/${uid}`));
+                document.getElementById('details-modal').classList.add('hidden');
+            }
+        }
+
+        // Map
         function initMap() {
             if(map) return;
-            map = L.map('admin-map', { zoomControl: false }).setView([16.8409, 96.1735], 13);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '',
-                subdomains: 'abcd',
-                maxZoom: 19
-            }).addTo(map);
-        }
-
-        async function updateMapMarkers(locations) {
-            if(!map) return;
-            const currentIds = new Set(Object.keys(locations));
+            map = L.map('admin-map', {zoomControl:false}).setView([16.8, 96.1], 12);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
             
-            Object.keys(markers).forEach(id => {
-                if(!currentIds.has(id)) { markers[id].remove(); delete markers[id]; }
+            if(navigator.geolocation) navigator.geolocation.getCurrentPosition(p => {
+                const latlng = [p.coords.latitude, p.coords.longitude];
+                map.setView(latlng, 14);
+                adminMarker = L.marker(latlng, {icon: L.divIcon({html:'<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white animate-pulse shadow-[0_0_10px_#3b82f6]"></div>', className:''})}).addTo(map);
             });
 
-            for(const [id, loc] of Object.entries(locations)) {
-                const isAvailable = loc.isAvailable;
-                const color = isAvailable ? '#10b981' : '#f59e0b';
-                
-                const iconHtml = `
-                    <div style="transform: rotate(${loc.heading || 0}deg); transition: transform 0.5s ease;">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" class="w-10 h-10 drop-shadow-lg">
-                        <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
-                        </svg>
-                    </div>
-                `;
-                const icon = L.divIcon({ html: iconHtml, className: '', iconSize: [40, 40], iconAnchor: [20, 20] });
+            document.getElementById('map-recenter-btn').onclick = () => { if(adminMarker) map.setView(adminMarker.getLatLng(), 15); else alert('Location not found'); }
 
-                if(markers[id]) {
-                    markers[id].setLatLng([loc.lat, loc.lng]).setIcon(icon);
-                } else {
-                    // Fetch name only on first marker creation to save reads
-                    const d = await get(ref(db, `drivers/${id}`));
-                    const name = d.exists() ? d.val().name : 'Driver';
-                    const car = d.exists() ? d.val().carPlate : '';
-                    
-                    const popupContent = `
-                        <div class="p-2 min-w-[150px]">
-                            <h3 class="font-bold text-white text-base">${name}</h3>
-                            <p class="text-xs text-slate-400 font-mono mb-1">${car}</p>
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isAvailable ? 'bg-emerald-500 text-black' : 'bg-amber-500 text-black'} uppercase">${isAvailable ? 'Available' : 'Busy'}</span>
-                        </div>
-                    `;
-                    markers[id] = L.marker([loc.lat, loc.lng], {icon}).addTo(map).bindPopup(popupContent);
-                }
+            document.getElementById('map-measure-btn').onclick = () => {
+                resetMeasure();
+                document.getElementById('measure-info').classList.remove('hidden');
+                document.getElementById('measure-results').innerHTML = '<p class="text-amber-400 font-bold">Tap Point A on Map</p>';
+                map.on('click', onMapClick);
             }
+        }
+        
+        function onMapClick(e) {
+            if(!measureStart) {
+                measureStart = e.latlng;
+                L.marker(measureStart, {icon: L.divIcon({html:'<div class="w-3 h-3 bg-white rounded-full"></div>', className:''})}).addTo(map);
+                document.getElementById('measure-results').innerHTML = '<p class="text-emerald-400 font-bold">Tap Point B on Map</p>';
+            } else if (!measureEnd) {
+                measureEnd = e.latlng;
+                map.off('click', onMapClick);
+                document.getElementById('measure-results').innerHTML = '<p class="text-blue-400 font-bold">Calculating...</p>';
+                measureControl = L.Routing.control({
+                    waypoints: [measureStart, measureEnd], createMarker:()=>null, addWaypoints:false, draggableWaypoints:false, show:false,
+                    lineOptions: {styles:[{color:'#10b981', weight:6}]}
+                }).addTo(map);
+                measureControl.on('routesfound', e => {
+                    const r = e.routes[0];
+                    const dist = (r.summary.totalDistance/1000).toFixed(1);
+                    const fare = Math.max(1500, Math.round((1500 + parseFloat(dist)*500)/100)*100);
+                    document.getElementById('measure-results').innerHTML = `<div><p class="text-xs text-slate-400 uppercase">Distance</p><p class="text-lg font-bold">${dist} km</p></div><div class="mt-2 border-t border-slate-700 pt-1"><p class="text-xs text-slate-400 uppercase">Est. Fare</p><p class="text-xl font-bold text-emerald-400">${fare.toLocaleString()} MMK</p></div>`;
+                });
+            }
+        }
+        
+        window.resetMeasure = () => {
+            if(measureControl) { map.removeControl(measureControl); measureControl = null; }
+            map.eachLayer(l => { if(l instanceof L.Marker && l !== adminMarker) map.removeLayer(l); });
+            measureStart = null; measureEnd = null; map.off('click', onMapClick);
+            document.getElementById('measure-info').classList.add('hidden');
         }
     </script>
 </body>
