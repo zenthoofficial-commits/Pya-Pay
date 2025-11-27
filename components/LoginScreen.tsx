@@ -1,6 +1,6 @@
-
 import React, { useState } from 'react';
 import { auth } from '../services/firebase';
+// @ts-ignore
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
 const LoginScreen: React.FC = () => {

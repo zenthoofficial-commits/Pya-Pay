@@ -17,6 +17,7 @@
             margin: 0; padding: 0;
             overflow: hidden;
             background-color: #f8fafc;
+            font-family: sans-serif;
         }
         #map { height: 100%; width: 100%; z-index: 0; background-color: #e2e8f0; }
         .leaflet-bottom, .leaflet-top { z-index: 5; }
@@ -90,7 +91,7 @@
     <div id="login-screen" class="hidden absolute inset-0 bg-white z-50 flex flex-col items-center justify-center p-6 animate-fade-in">
         <div class="w-full max-w-sm text-center">
             <h1 class="text-5xl font-bold text-blue-600 mb-2">Pyapay</h1>
-            <p class="text-slate-500 mb-8">Passenger App</p>
+            <p class="text-slate-500 mb-8">ခရီးသည် အက်ပ် (Passenger)</p>
             <div class="bg-white border border-slate-200 shadow-xl rounded-2xl p-6 space-y-4">
                 <input id="passenger-name" type="text" placeholder="သင့်အမည်" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <input id="passenger-phone" type="tel" placeholder="ဖုန်းနံပါတ်" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -119,7 +120,7 @@
         <!-- Nearby Drivers Panel (Left Menu) -->
         <div id="nearby-drivers-panel" class="hidden absolute top-0 left-0 bottom-0 w-full md:w-80 bg-white p-4 z-20 animate-fade-in border-r border-slate-200 shadow-2xl flex flex-col">
             <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-4 flex-shrink-0">
-                <h2 class="text-xl font-bold text-slate-800">အနီးအနားမှ ကားများ</h2>
+                <h2 class="text-xl font-bold text-slate-800">အနီးအနားရှိ ယာဉ်မောင်းများ</h2>
                  <button id="close-drivers-panel" class="p-1 rounded-full hover:bg-slate-100"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-slate-400"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
             </div>
             <div id="drivers-list" class="flex-1 overflow-y-auto space-y-4 pr-1 pb-4">
@@ -134,7 +135,7 @@
                 <!-- Pickup Input -->
                 <div class="relative">
                     <div class="absolute left-3 top-3 w-3 h-3 bg-blue-500 rounded-full border border-white shadow-sm"></div>
-                    <input id="pickup-input" type="text" placeholder="လက်ရှိနေရာ (Current Location)" class="w-full bg-white border border-slate-200 rounded-lg py-3 pl-8 pr-12 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input id="pickup-input" type="text" placeholder="လက်ရှိနေရာ" class="w-full bg-white border border-slate-200 rounded-lg py-3 pl-8 pr-12 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <button class="map-pick-btn absolute right-2 top-2 p-1.5 bg-blue-50 rounded hover:bg-blue-100 text-blue-500" data-target="pickup">
                         <!-- Blue GPS Icon -->
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
@@ -160,7 +161,7 @@
 
         <div id="confirm-panel" class="hidden absolute bottom-0 left-0 right-0 bg-white p-4 rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.1)] animate-slide-up z-10">
             <div id="direct-booking-alert" class="hidden bg-amber-50 border border-amber-200 text-amber-700 p-2 rounded-lg text-center text-sm mb-3">
-                <span class="font-bold">Direct Booking:</span> Priority request to selected driver.
+                <span class="font-bold">တိုက်ရိုက်ငှားရမ်းခြင်း:</span> ရွေးချယ်ထားသော ယာဉ်မောင်းထံ ဦးစားပေးပို့ပါမည်။
             </div>
             <div id="vehicle-options" class="flex justify-around mb-4 bg-slate-100 p-1 rounded-full">
                 <button data-type="Normal" class="vehicle-btn flex-1 py-2 px-4 rounded-full text-center font-semibold bg-white text-slate-800 shadow-sm">Normal</button>
@@ -172,11 +173,11 @@
             </div>
             <div class="flex gap-2 mb-4">
                 <select id="payment-method" class="w-1/2 bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                    <option value="Cash">Cash</option>
+                    <option value="Cash">ငွေသား (Cash)</option>
                     <option value="KBZPay">KBZPay</option>
                     <option value="WavePay">WavePay</option>
                 </select>
-                <input id="promo-code" type="text" placeholder="Promo Code" class="w-1/2 bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <input id="promo-code" type="text" placeholder="ပရိုမိုကုဒ်" class="w-1/2 bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
             </div>
             
             <button id="confirm-ride-button" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-500/30">ချက်ချင်းခေါ်မည်</button>
@@ -191,7 +192,7 @@
     <div id="profile-modal" class="hidden absolute inset-0 bg-black/60 z-40 animate-fade-in flex justify-center items-center backdrop-blur-sm">
         <div class="bg-white w-full max-w-md h-full max-h-[95vh] rounded-2xl shadow-2xl flex flex-col">
             <header class="p-4 flex justify-between items-center border-b border-slate-100">
-                <h2 class="text-xl font-bold text-slate-800">Profile</h2>
+                <h2 class="text-xl font-bold text-slate-800">အကောင့် (Profile)</h2>
                 <button id="close-profile-button" class="p-1"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-slate-400"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
             </header>
             <div class="p-4 flex items-center gap-4 border-b border-slate-100 bg-slate-50">
@@ -202,24 +203,24 @@
                 </div>
             </div>
             <div class="flex border-b border-slate-100">
-                <button data-tab="history" class="profile-tab flex-1 p-3 font-semibold border-b-2 tab-active transition-colors">History</button>
-                <button data-tab="favorites" class="profile-tab flex-1 p-3 font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-600 transition-colors">Favorites</button>
-                <button data-tab="settings" class="profile-tab flex-1 p-3 font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-600 transition-colors">Settings</button>
+                <button data-tab="history" class="profile-tab flex-1 p-3 font-semibold border-b-2 tab-active transition-colors">မှတ်တမ်း</button>
+                <button data-tab="favorites" class="profile-tab flex-1 p-3 font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-600 transition-colors">အကြိုက်ဆုံး</button>
+                <button data-tab="settings" class="profile-tab flex-1 p-3 font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-600 transition-colors">ဆက်တင်များ</button>
             </div>
             <div id="history-content" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar"></div>
             <div id="favorites-content" class="hidden flex-1 overflow-y-auto p-4 space-y-4">
                 <div>
-                    <label class="text-sm text-slate-500 font-bold">Home</label>
-                    <input id="home-address-input" type="text" placeholder="Address" class="w-full mt-1 bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm text-slate-800">
+                    <label class="text-sm text-slate-500 font-bold">အိမ်</label>
+                    <input id="home-address-input" type="text" placeholder="လိပ်စာ" class="w-full mt-1 bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm text-slate-800">
                 </div>
                  <div>
-                    <label class="text-sm text-slate-500 font-bold">Work</label>
-                    <input id="work-address-input" type="text" placeholder="Address" class="w-full mt-1 bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm text-slate-800">
+                    <label class="text-sm text-slate-500 font-bold">အလုပ်</label>
+                    <input id="work-address-input" type="text" placeholder="လိပ်စာ" class="w-full mt-1 bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm text-slate-800">
                 </div>
-                <button id="save-favorites-button" class="w-full bg-blue-600 text-white font-bold py-2 mt-2 rounded-lg shadow">Save</button>
+                <button id="save-favorites-button" class="w-full bg-blue-600 text-white font-bold py-2 mt-2 rounded-lg shadow">သိမ်းဆည်းမည်</button>
             </div>
             <div id="settings-content" class="hidden flex-1 overflow-y-auto p-4 space-y-4">
-                 <button id="logout-button" class="w-full bg-red-50 text-red-600 font-bold py-3 mt-6 rounded-lg border border-red-100 hover:bg-red-100">Log Out</button>
+                 <button id="logout-button" class="w-full bg-red-50 text-red-600 font-bold py-3 mt-6 rounded-lg border border-red-100 hover:bg-red-100">အကောင့်ထွက်မည်</button>
             </div>
         </div>
     </div>
@@ -342,7 +343,7 @@
             navigator.geolocation.watchPosition(pos => {
                 currentLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
                 if (!pickupLocation) {
-                    pickupLocation = { lat: currentLocation.lat, lng: currentLocation.lng, address: "Current Location" };
+                    pickupLocation = { lat: currentLocation.lat, lng: currentLocation.lng, address: "လက်ရှိနေရာ" };
                 }
                 if (!map.getBounds().contains(L.latLng(currentLocation))) map.setView(currentLocation, 16);
                 if (!userMarker) userMarker = L.marker(currentLocation, { icon: userIcon }).addTo(map);
@@ -501,17 +502,17 @@
             // Set Pin Color based on target
             if(target === 'pickup') {
                 dom.pinImage.src = BLUE_PIN_SVG;
-                dom.confirmBtnText.innerText = "လာကြိုမည့်နေရာ";
+                dom.confirmBtnText.innerText = "ဤနေရာတွင် လာကြိုပါ";
                 dom.confirmMapPickBtn.className = dom.confirmMapPickBtn.className.replace('bg-red-600', 'bg-blue-600').replace('hover:bg-red-700', 'hover:bg-blue-700');
             } else {
                 dom.pinImage.src = RED_PIN_SVG;
-                dom.confirmBtnText.innerText = "သွားလိုသည့်နေရာ";
+                dom.confirmBtnText.innerText = "ဤနေရာသို့ သွားမည်";
                 dom.confirmMapPickBtn.className = dom.confirmMapPickBtn.className.replace('bg-blue-600', 'bg-red-600').replace('hover:bg-blue-700', 'hover:bg-red-700');
             }
         }
         
         async function handleConfirmPick() {
-            dom.confirmBtnText.innerText = "Getting Address...";
+            dom.confirmBtnText.innerText = "လိပ်စာရယူနေသည်...";
             const center = map.getCenter();
             
             try {
@@ -542,7 +543,7 @@
 
             } catch (err) {
                 alert("လိပ်စာရယူမရနိုင်ပါ။ အင်တာနက်စစ်ဆေးပါ။");
-                dom.confirmBtnText.innerText = "Confirm Location";
+                dom.confirmBtnText.innerText = "အတည်ပြုမည်";
             }
         }
 
@@ -595,7 +596,7 @@
             } else {
                  drivers.forEach(d => {
                     const statusColor = d.isAvailable ? 'text-green-500' : 'text-red-500';
-                    const statusText = d.isAvailable ? 'Available' : 'Busy';
+                    const statusText = d.isAvailable ? 'အားသည်' : 'မအားပါ';
                     const opacity = d.isAvailable ? 'opacity-100' : 'opacity-60';
                     const cursor = d.isAvailable ? 'cursor-pointer hover:bg-slate-50' : 'cursor-not-allowed';
 
@@ -617,8 +618,8 @@
                         </div>
                         <div class="mt-3 flex justify-between items-center text-sm border-t border-slate-100 pt-2">
                             <div class="flex gap-4">
-                                <div><p class="text-slate-400 text-xs">Distance</p><p class="font-semibold text-slate-700">${d.distKm} km</p></div>
-                                <div><p class="text-slate-400 text-xs">Est. Price</p><p class="font-bold text-green-600">~${d.price.toLocaleString()} Ks</p></div>
+                                <div><p class="text-slate-400 text-xs">အကွာအဝေး</p><p class="font-semibold text-slate-700">${d.distKm} km</p></div>
+                                <div><p class="text-slate-400 text-xs">ခန့်မှန်းခ</p><p class="font-bold text-green-600">~${d.price.toLocaleString()} Ks</p></div>
                             </div>
                             ${d.isAvailable ? `<button class="select-driver-btn bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded hover:bg-blue-500 shadow">ရွေးချယ်မည်</button>` : ''}
                         </div>
@@ -709,7 +710,7 @@
                 currentFareDetails.distance = route.summary.totalDistance / 1000;
                 currentFareDetails.duration = Math.round(route.summary.totalTime / 60);
                 updateFareDisplay();
-                document.getElementById('trip-info-display').innerText = `~${currentFareDetails.distance.toFixed(1)} km, ${currentFareDetails.duration} mins`;
+                document.getElementById('trip-info-display').innerText = `~${currentFareDetails.distance.toFixed(1)} km, ${currentFareDetails.duration} မိနစ်`;
                 dom.searchPanel.classList.add('hidden');
                 dom.confirmPanel.classList.remove('hidden');
             });
@@ -954,7 +955,7 @@
             const panel = dom.tripStatusPanel;
             panel.innerHTML = '';
             
-            const tokenHeader = activeTrip && activeTrip.token ? `<div class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold w-fit mx-auto mb-2 border border-blue-200">Trip Token: ${activeTrip.token}</div>` : '';
+            const tokenHeader = activeTrip && activeTrip.token ? `<div class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold w-fit mx-auto mb-2 border border-blue-200">Token: ${activeTrip.token}</div>` : '';
 
             if (status === 'searching') {
                 panel.innerHTML = `<div class="text-center p-4">
@@ -970,7 +971,7 @@
                 panel.innerHTML = `<div class="p-2 text-center">
                     ${tokenHeader}
                     <h3 class="text-xl font-bold text-blue-600">${title}</h3>
-                    ${status === 'accepted' ? '<p class="text-amber-500 font-semibold" id="driver-eta">Calculating ETA...</p>' : ''}
+                    ${status === 'accepted' ? '<p class="text-amber-500 font-semibold" id="driver-eta">အချိန် တွက်ချက်နေသည်...</p>' : ''}
                     <div class="bg-slate-50 border border-slate-100 p-4 rounded-xl mt-4">
                         <div class="w-16 h-16 rounded-full bg-slate-200 mx-auto mb-2 overflow-hidden">
                              ${activeTrip.driverDetails?.profilePic ? `<img src="${activeTrip.driverDetails.profilePic}" class="w-full h-full object-cover">` : '<div class="w-full h-full flex items-center justify-center text-slate-500 font-bold text-2xl">?</div>'}
@@ -1032,6 +1033,7 @@
             historyContent.innerHTML = `<p class="text-slate-400 text-center">Loading...</p>`;
             
             try {
+                // Changed to fetch all trips without limit
                 const snapshot = await get(ref(db, `passengers/${currentUser.uid}/completedTrips`));
                 historyContent.innerHTML = '';
                 
@@ -1067,7 +1069,7 @@
                 } else historyContent.innerHTML = `<p class="text-slate-400 text-center py-8">ခရီးစဉ်မှတ်တမ်း မရှိပါ။</p>`;
             } catch (e) { 
                 console.error(e);
-                historyContent.innerHTML = `<p class="text-red-400 text-center py-8">Error loading history.</p>`; 
+                historyContent.innerHTML = `<p class="text-red-400 text-center py-8">မှတ်တမ်းရယူမရနိုင်ပါ</p>`; 
             }
         }
         
@@ -1080,7 +1082,7 @@
         function showChatModal() {
             unreadMessages = 0; updateChatBadge();
             dom.chatModal.classList.remove('hidden');
-            dom.chatModal.innerHTML = `<div class="absolute inset-0 bg-black/60 z-30 flex justify-center items-end backdrop-blur-sm" id="chat-backdrop"><div class="bg-white rounded-t-2xl w-full max-w-md flex flex-col h-[85vh] shadow-2xl"><header class="flex items-center p-4 border-b border-slate-100"><button id="close-chat-button" class="p-2 -ml-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-slate-500"><polyline points="15 18 9 12 15 6"></polyline></svg></button><h2 class="text-xl font-bold text-slate-800 mx-auto">Driver Chat</h2><div class="w-10"></div></header><main id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50"></main><footer class="p-4 border-t border-slate-100 bg-white"><form id="chat-form" class="flex gap-2"><input id="chat-input" type="text" placeholder="စာရိုက်ပါ..." class="flex-1 bg-slate-100 rounded-full py-2 px-4 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"><button type="submit" class="bg-blue-600 rounded-full p-3 text-white shadow"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></button></form></footer></div></div>`;
+            dom.chatModal.innerHTML = `<div class="absolute inset-0 bg-black/60 z-30 flex justify-center items-end backdrop-blur-sm" id="chat-backdrop"><div class="bg-white rounded-t-2xl w-full max-w-md flex flex-col h-[85vh] shadow-2xl"><header class="flex items-center p-4 border-b border-slate-100"><button id="close-chat-button" class="p-2 -ml-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-slate-500"><polyline points="15 18 9 12 15 6"></polyline></svg></button><h2 class="text-xl font-bold text-slate-800 mx-auto">ယာဉ်မောင်းနှင့် စကားပြောရန်</h2><div class="w-10"></div></header><main id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50"></main><footer class="p-4 border-t border-slate-100 bg-white"><form id="chat-form" class="flex gap-2"><input id="chat-input" type="text" placeholder="စာရိုက်ပါ..." class="flex-1 bg-slate-100 rounded-full py-2 px-4 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"><button type="submit" class="bg-blue-600 rounded-full p-3 text-white shadow"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></button></form></footer></div></div>`;
             document.getElementById('close-chat-button').onclick = () => dom.chatModal.classList.add('hidden');
             document.getElementById('chat-backdrop').onclick = (e) => { if(e.target.id === 'chat-backdrop') dom.chatModal.classList.add('hidden'); };
             document.getElementById('chat-form').onsubmit = handleSendMessage;
@@ -1150,7 +1152,7 @@
             
             // Re-init pickup with current loc
             if(currentLocation) {
-                pickupLocation = { lat: currentLocation.lat, lng: currentLocation.lng, address: "Current Location" };
+                pickupLocation = { lat: currentLocation.lat, lng: currentLocation.lng, address: "လက်ရှိနေရာ" };
                 dom.pickupInput.value = "";
             }
         }

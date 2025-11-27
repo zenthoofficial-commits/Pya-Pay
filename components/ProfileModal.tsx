@@ -1,9 +1,9 @@
-
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { CloseIcon } from './Icons';
 import { auth, db } from '../services/firebase';
+// @ts-ignore
 import { signOut } from 'firebase/auth';
-import { ref, update } from 'firebase/database';
+import { ref, update, get } from 'firebase/database';
 
 interface ProfileModalProps {
   driverId: string;
@@ -17,12 +17,35 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ driverId, onClose, isOnline
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [localProfilePic, setLocalProfilePic] = useState<string | null>(null);
+    const [carDetails, setCarDetails] = useState({ model: 'Loading...', plate: '' });
+
+    useEffect(() => {
+        // Fetch driver details to show car model/plate
+        const fetchDetails = async () => {
+            try {
+                const snapshot = await get(ref(db, `drivers/${driverId}`));
+                if(snapshot.exists()) {
+                    const data = snapshot.val();
+                    setCarDetails({
+                        model: data.carModel || 'မသိရှိပါ',
+                        plate: data.carPlate || ''
+                    });
+                    setLocalProfilePic(data.profilePic);
+                }
+            } catch (e) {
+                console.error("Error fetching driver details", e);
+            }
+        };
+        fetchDetails();
+    }, [driverId]);
 
     const handleLogout = () => {
-        signOut(auth).catch(error => {
-            console.error("Logout failed:", error);
-            alert("ထွက်ခွာရာတွင် အမှားအယွင်းဖြစ်နေပါသည်။");
-        });
+        if(confirm("အကောင့်ထွက်ရန် သေချာပါသလား?")) {
+            signOut(auth).catch(error => {
+                console.error("Logout failed:", error);
+                alert("ထွက်ခွာရာတွင် အမှားအယွင်းဖြစ်နေပါသည်။");
+            });
+        }
     };
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,14 +54,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ driverId, onClose, isOnline
             const reader = new FileReader();
             reader.onloadend = async () => {
                 const base64String = reader.result as string;
-                // Limit size to prevent database issues (approx 100kb limit logic would be good, but simple here)
                 if (base64String.length > 500000) {
                      alert("ဓာတ်ပုံဖိုင်ဆိုဒ် ကြီးလွန်းပါသည်။");
                      return;
                 }
                 setLocalProfilePic(base64String);
                 
-                // Update in DB
                 try {
                     const driverRef = ref(db, `drivers/${driverId}`);
                     await update(driverRef, { profilePic: base64String });
@@ -56,17 +77,17 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ driverId, onClose, isOnline
     };
 
   return (
-    <div className="absolute inset-0 bg-black/60 z-20 flex justify-center items-center backdrop-blur-sm">
-      <div className="bg-white rounded-2xl w-11/12 max-w-md p-6 text-slate-800 shadow-2xl">
+    <div className="absolute inset-0 bg-black/60 z-20 flex justify-center items-center backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl w-full max-w-sm p-6 text-slate-800 shadow-2xl">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Profile</h2>
+          <h2 className="text-xl font-bold text-slate-800">ပရိုဖိုင် (Profile)</h2>
           <button onClick={onClose} className="hover:text-red-500 bg-gray-100 p-2 rounded-full">
             <CloseIcon className="h-6 w-6 text-slate-600" />
           </button>
         </div>
 
-        <div className="flex items-center space-x-4 mb-8 bg-blue-50 p-4 rounded-xl border border-blue-100">
-            <div className="relative group cursor-pointer" onClick={triggerFileInput}>
+        <div className="flex items-center space-x-4 mb-6 bg-blue-50 p-4 rounded-xl border border-blue-100">
+            <div className="relative group cursor-pointer flex-shrink-0" onClick={triggerFileInput}>
                 <img 
                     src={localProfilePic || `https://i.pravatar.cc/150?u=${driverId}`} 
                     alt="Driver" 
@@ -83,27 +104,26 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ driverId, onClose, isOnline
                     onChange={handleImageChange}
                 />
             </div>
-            <div>
-                <h3 className="text-xl font-bold text-slate-800">My Profile</h3>
-                <p className="text-sm text-slate-500 font-medium">Rating: <span className="text-orange-500">4.8 ★</span></p>
-                <div className="mt-1 text-sm text-slate-600">
-                    <p className="text-xs text-blue-500 cursor-pointer" onClick={triggerFileInput}>Change Photo</p>
-                </div>
+            <div className="overflow-hidden">
+                <h3 className="text-lg font-bold text-slate-800 truncate">ယာဉ်မောင်း</h3>
+                <p className="text-sm text-slate-600 font-medium truncate">{carDetails.model}</p>
+                <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-mono font-bold">{carDetails.plate}</span>
+                <p className="text-xs text-blue-500 cursor-pointer mt-1" onClick={triggerFileInput}>ပုံပြောင်းရန်</p>
             </div>
         </div>
 
         <div className="space-y-5">
-            <h4 className="text-lg font-bold text-slate-700 border-b border-gray-100 pb-2">Settings</h4>
+            <h4 className="text-base font-bold text-slate-500 border-b border-gray-100 pb-2">ဆက်တင်များ</h4>
              <div className="flex justify-between items-center">
-                <span className="font-medium text-slate-600">Online Status</span>
-                <button onClick={isOnline ? onGoOffline : onGoOnline} className={`w-14 h-8 rounded-full p-1 transition-colors duration-300 ${isOnline ? 'bg-green-500' : 'bg-gray-300'}`}>
-                    <div className={`w-6 h-6 rounded-full bg-white shadow-md transform transition-transform duration-300 ${isOnline ? 'translate-x-6' : ''}`} />
+                <span className="font-medium text-slate-700">အွန်လိုင်း အခြေအနေ</span>
+                <button onClick={isOnline ? onGoOffline : onGoOnline} className={`w-12 h-7 rounded-full p-1 transition-colors duration-300 ${isOnline ? 'bg-green-500' : 'bg-gray-300'}`}>
+                    <div className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-300 ${isOnline ? 'translate-x-5' : ''}`} />
                 </button>
             </div>
             <div className="flex justify-between items-center">
-                <span className="font-medium text-slate-600">Notifications</span>
-                <button onClick={() => setNotificationsEnabled(!notificationsEnabled)} className={`w-14 h-8 rounded-full p-1 transition-colors duration-300 ${notificationsEnabled ? 'bg-green-500' : 'bg-gray-300'}`}>
-                    <div className={`w-6 h-6 rounded-full bg-white shadow-md transform transition-transform duration-300 ${notificationsEnabled ? 'translate-x-6' : ''}`} />
+                <span className="font-medium text-slate-700">အသိပေးချက်များ</span>
+                <button onClick={() => setNotificationsEnabled(!notificationsEnabled)} className={`w-12 h-7 rounded-full p-1 transition-colors duration-300 ${notificationsEnabled ? 'bg-green-500' : 'bg-gray-300'}`}>
+                    <div className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-300 ${notificationsEnabled ? 'translate-x-5' : ''}`} />
                 </button>
             </div>
         </div>
@@ -112,7 +132,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ driverId, onClose, isOnline
             onClick={handleLogout}
             className="mt-8 w-full bg-red-50 text-red-600 font-bold py-3 px-4 rounded-xl hover:bg-red-100 transition-colors border border-red-200"
         >
-            Log Out
+            အကောင့်ထွက်မည်
         </button>
 
       </div>

@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ref, onChildAdded, query as dbQuery, orderByChild, equalTo, update, remove, onValue, set, serverTimestamp, get, off, limitToLast } from 'firebase/database';
 import { auth, db } from './services/firebase';
+// @ts-ignore
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { Trip, LatLngLiteral } from './types';
 import { calculateTripDetails } from './services/tripService';
