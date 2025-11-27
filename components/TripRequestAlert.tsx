@@ -79,4 +79,3 @@ const TripRequestAlert: React.FC<TripRequestAlertProps> = ({ trip, onAccept, onD
 };
 
 export default TripRequestAlert;
-    

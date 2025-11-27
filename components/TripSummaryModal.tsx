@@ -79,4 +79,3 @@ const TripSummaryModal: React.FC<TripSummaryModalProps> = ({ trip, onClose, comm
 };
 
 export default TripSummaryModal;
-    

@@ -234,4 +234,3 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ onClose, balance, tripHis
 };
 
 export default EarningsModal;
-    

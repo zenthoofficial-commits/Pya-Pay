@@ -91,7 +91,7 @@
         <!-- Header -->
         <header id="main-header" class="absolute top-4 left-4 right-4 z-10 flex justify-between items-center pointer-events-none">
              <button id="menu-button" class="pointer-events-auto bg-white p-3 rounded-full shadow-lg border border-slate-200 hover:bg-slate-50">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-slate-600" fill="none" viewBox="0 0 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
             <button id="profile-button" class="pointer-events-auto bg-white p-3 rounded-full shadow-lg border border-slate-200 hover:bg-slate-50">
                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-slate-600"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
@@ -213,7 +213,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getDatabase, ref, set, get, onValue, off, remove, query, orderByChild, equalTo, onChildAdded, serverTimestamp, update, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+        import { getDatabase, ref, set, get, onValue, off, remove, query, orderByChild, equalTo, onChildAdded, serverTimestamp, update, limitToLast, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
         // Separate App Name to avoid conflict with Admin Panel if run in same browser
         const firebaseConfig = { apiKey: "AIzaSyB7zSpZMYgS2SChtyFrUvvp0txPutecF3g", authDomain: "zenstride.firebaseapp.com", databaseURL: "https://zenstride-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "zenstride", storageBucket: "zenstride.firebasestorage.app", messagingSenderId: "588697035765", appId: "1:588697035765:web:9411ea5aa9588ceb7d36bc" };
@@ -333,7 +333,7 @@
                     dom.confirmPanel.classList.add('hidden');
                     dom.tripStatusPanel.classList.remove('hidden');
                     if(tripData.status === 'pending') updateTripStatusUI('searching');
-                    listenToTripUpdates(tripId);
+                    else listenToTripUpdates(tripId);
                     return;
                 }
             }
