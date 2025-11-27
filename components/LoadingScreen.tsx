@@ -3,7 +3,7 @@ import React from 'react';
 
 const LoadingScreen: React.FC = () => {
   return (
-    <div className="flex flex-col items-center justify-center h-screen w-screen bg-blue-500 text-white">
+    <div className="flex flex-col items-center justify-center h-screen w-screen bg-[#06B9FF] text-white">
       <style>{`
         @keyframes pulse-light {
           0%, 100% {
@@ -23,7 +23,7 @@ const LoadingScreen: React.FC = () => {
         Pyapay
       </div>
       <div className="w-12 h-12 border-4 border-blue-200 border-t-white rounded-full animate-spin"></div>
-      <p className="mt-4 text-blue-100 font-medium tracking-wider">Driver App</p>
+      <p className="mt-4 text-white font-medium tracking-wider">Driver App</p>
     </div>
   );
 };

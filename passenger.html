@@ -16,7 +16,7 @@
             height: 100dvh; width: 100vw;
             margin: 0; padding: 0;
             overflow: hidden;
-            background-color: #f8fafc;
+            background-color: #ffffff; /* White background */
             font-family: sans-serif;
         }
         #map { height: 100%; width: 100%; z-index: 0; background-color: #e2e8f0; }
@@ -29,9 +29,9 @@
         .hidden { display: none !important; }
         .pulse { animation: pulse-animation 2s infinite; }
         @keyframes pulse-animation {
-            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
-            70% { box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+            0% { box-shadow: 0 0 0 0 rgba(69, 201, 255, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(69, 201, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(69, 201, 255, 0); }
         }
         .chat-badge {
             position: absolute; top: -5px; right: -8px;
@@ -46,11 +46,11 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
         .loading-spinner {
-            border: 4px solid #eff6ff; border-left-color: #3b82f6;
+            border: 4px solid #eff6ff; border-left-color: #45C9FF; /* Theme color */
             border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .tab-active { border-color: #3b82f6; color: #3b82f6; }
+        .tab-active { border-color: #45C9FF; color: #45C9FF; }
         .star-rating span { font-size: 2rem; cursor: pointer; color: #cbd5e1; transition: color 0.2s; }
         .star-rating span.active { color: #f59e0b; }
         
@@ -62,12 +62,25 @@
             transition: transform 0.2s;
         }
         .map-moving #map-center-pin { transform: translate(-50%, -110%); }
+        
+        /* Custom Scrollbar for history */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Theme Colors */
+        .bg-theme { background-color: #45C9FF; }
+        .text-theme { color: #45C9FF; }
+        .border-theme { border-color: #45C9FF; }
+        .hover-bg-theme:hover { background-color: #3bbbf0; }
+        .focus-ring-theme:focus { --tw-ring-color: #45C9FF; }
     </style>
 </head>
 <body class="text-slate-800">
 
     <div id="loading-overlay">
-        <h1 class="text-3xl font-bold text-blue-500 mb-4 animate-pulse">Pyapay</h1>
+        <h1 class="text-3xl font-bold text-theme mb-4 animate-pulse">Pyapay</h1>
         <div class="loading-spinner"></div>
     </div>
 
@@ -90,12 +103,12 @@
     <!-- Login Screen -->
     <div id="login-screen" class="hidden absolute inset-0 bg-white z-50 flex flex-col items-center justify-center p-6 animate-fade-in">
         <div class="w-full max-w-sm text-center">
-            <h1 class="text-5xl font-bold text-blue-600 mb-2">Pyapay</h1>
+            <h1 class="text-5xl font-bold text-theme mb-2">Pyapay</h1>
             <p class="text-slate-500 mb-8">ခရီးသည် အက်ပ် (Passenger)</p>
             <div class="bg-white border border-slate-200 shadow-xl rounded-2xl p-6 space-y-4">
-                <input id="passenger-name" type="text" placeholder="သင့်အမည်" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <input id="passenger-phone" type="tel" placeholder="ဖုန်းနံပါတ်" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <button id="login-button" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-500/30">စတင်အသုံးပြုမည်</button>
+                <input id="passenger-name" type="text" placeholder="သင့်အမည်" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus-ring-theme">
+                <input id="passenger-phone" type="tel" placeholder="ဖုန်းနံပါတ်" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus-ring-theme">
+                <button id="login-button" class="w-full bg-theme text-white font-bold py-3 rounded-xl hover-bg-theme transition shadow-lg shadow-blue-200">စတင်အသုံးပြုမည်</button>
             </div>
         </div>
     </div>
@@ -113,7 +126,7 @@
         </header>
 
         <!-- Recenter Button -->
-        <button id="recenter-btn" class="absolute bottom-72 right-4 z-20 bg-white text-blue-600 p-3 rounded-full shadow-lg border border-slate-200 hover:bg-slate-50 transition">
+        <button id="recenter-btn" class="absolute bottom-72 right-4 z-20 bg-white text-theme p-3 rounded-full shadow-lg border border-slate-200 hover:bg-slate-50 transition">
              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
         </button>
 
@@ -134,9 +147,9 @@
             <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3 relative">
                 <!-- Pickup Input -->
                 <div class="relative">
-                    <div class="absolute left-3 top-3 w-3 h-3 bg-blue-500 rounded-full border border-white shadow-sm"></div>
-                    <input id="pickup-input" type="text" placeholder="လက်ရှိနေရာ" class="w-full bg-white border border-slate-200 rounded-lg py-3 pl-8 pr-12 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <button class="map-pick-btn absolute right-2 top-2 p-1.5 bg-blue-50 rounded hover:bg-blue-100 text-blue-500" data-target="pickup">
+                    <div class="absolute left-3 top-3 w-3 h-3 bg-theme rounded-full border border-white shadow-sm"></div>
+                    <input id="pickup-input" type="text" placeholder="လက်ရှိနေရာ" class="w-full bg-white border border-slate-200 rounded-lg py-3 pl-8 pr-12 text-slate-800 text-sm focus:outline-none focus:ring-2 focus-ring-theme">
+                    <button class="map-pick-btn absolute right-2 top-2 p-1.5 bg-blue-50 rounded hover:bg-blue-100 text-theme" data-target="pickup">
                         <!-- Blue GPS Icon -->
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                     </button>
@@ -172,15 +185,15 @@
                 <p class="text-slate-500" id="trip-info-display"></p>
             </div>
             <div class="flex gap-2 mb-4">
-                <select id="payment-method" class="w-1/2 bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <select id="payment-method" class="w-1/2 bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus-ring-theme">
                     <option value="Cash">ငွေသား (Cash)</option>
                     <option value="KBZPay">KBZPay</option>
                     <option value="WavePay">WavePay</option>
                 </select>
-                <input id="promo-code" type="text" placeholder="ပရိုမိုကုဒ်" class="w-1/2 bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <input id="promo-code" type="text" placeholder="ပရိုမိုကုဒ်" class="w-1/2 bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus-ring-theme">
             </div>
             
-            <button id="confirm-ride-button" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-500/30">ချက်ချင်းခေါ်မည်</button>
+            <button id="confirm-ride-button" class="w-full bg-theme text-white font-bold py-3 rounded-xl hover-bg-theme transition shadow-lg shadow-blue-200">ချက်ချင်းခေါ်မည်</button>
             
             <button id="cancel-search-button" class="w-full bg-transparent text-slate-400 font-semibold py-2 mt-2 rounded-lg hover:text-slate-600 transition">ပယ်ဖျက်မည်</button>
         </div>
@@ -196,7 +209,7 @@
                 <button id="close-profile-button" class="p-1"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-slate-400"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
             </header>
             <div class="p-4 flex items-center gap-4 border-b border-slate-100 bg-slate-50">
-                <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-2xl font-bold text-blue-600" id="profile-initial"></div>
+                <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-2xl font-bold text-theme" id="profile-initial"></div>
                 <div>
                     <h3 id="profile-name" class="text-lg font-bold text-slate-800"></h3>
                     <p id="profile-phone" class="text-sm text-slate-500"></p>
@@ -217,7 +230,7 @@
                     <label class="text-sm text-slate-500 font-bold">အလုပ်</label>
                     <input id="work-address-input" type="text" placeholder="လိပ်စာ" class="w-full mt-1 bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm text-slate-800">
                 </div>
-                <button id="save-favorites-button" class="w-full bg-blue-600 text-white font-bold py-2 mt-2 rounded-lg shadow">သိမ်းဆည်းမည်</button>
+                <button id="save-favorites-button" class="w-full bg-theme text-white font-bold py-2 mt-2 rounded-lg shadow">သိမ်းဆည်းမည်</button>
             </div>
             <div id="settings-content" class="hidden flex-1 overflow-y-auto p-4 space-y-4">
                  <button id="logout-button" class="w-full bg-red-50 text-red-600 font-bold py-3 mt-6 rounded-lg border border-red-100 hover:bg-red-100">အကောင့်ထွက်မည်</button>
@@ -233,7 +246,7 @@
             <div class="star-rating flex justify-center gap-2 mb-6" id="star-rating">
                 <span data-val="1">★</span><span data-val="2">★</span><span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span>
             </div>
-            <button id="submit-rating-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-blue-700">အမှတ်ပေးမည်</button>
+            <button id="submit-rating-btn" class="w-full bg-theme text-white font-bold py-3 rounded-xl shadow-lg hover-bg-theme">အမှတ်ပေးမည်</button>
             <button id="skip-rating-btn" class="mt-3 text-slate-400 hover:text-slate-600 font-semibold text-sm">ကျော်သွားမည်</button>
         </div>
     </div>
@@ -277,7 +290,7 @@
         let pickingTarget = null; // 'pickup' or 'dropoff'
         
         // SVG Icons for Pin
-        const BLUE_PIN_SVG = `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="#3b82f6" stroke="white" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>')}`;
+        const BLUE_PIN_SVG = `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="#45C9FF" stroke="white" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>')}`;
         const RED_PIN_SVG = `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="#ef4444" stroke="white" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>')}`;
 
         const dom = {
@@ -308,7 +321,7 @@
             confirmBtnText: document.getElementById('confirm-btn-text')
         };
         
-        const userIcon = L.divIcon({ html: `<div class="w-6 h-6 bg-blue-500 rounded-full border-2 border-white pulse shadow-lg"></div>`, className: '', iconSize: [24, 24], iconAnchor: [12, 12] });
+        const userIcon = L.divIcon({ html: `<div class="w-6 h-6 bg-theme rounded-full border-2 border-white pulse shadow-lg"></div>`, className: '', iconSize: [24, 24], iconAnchor: [12, 12] });
         const driverIcon = (rotation) => L.divIcon({ html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#16a34a" class="w-8 h-8 drop-shadow-md" style="transform: rotate(${rotation || 0}deg);"><path d="M19,5.5C19,4.4,18.1,3.5,17,3.5H7C5.9,3.5,5,4.4,5,5.5V16.5C5,17.6,5.9,18.5,7,18.5H6C5.4,18.5,5,18.9,5,19.5S5.4,20.5,6,20.5H18C18.6,20.5,19,20.1,19,19.5S18.6,18.5,18,18.5H17C18.1,18.5,19,17.6,19,16.5V5.5M17,16.5H7V5.5H17V16.5M8,15.5A1.5,1.5 0 0,0 9.5,17A1.5,1.5 0 0,0 11,15.5A1.5,1.5 0 0,0 9.5,14A1.5,1.5 0 0,0 8,15.5M13,15.5A1.5,1.5 0 0,0 14.5,17A1.5,1.5 0 0,0 16,15.5A1.5,1.5 0 0,0 14.5,14A1.5,1.5 0 0,0 13,15.5M7,8.5H17V11.5H7V8.5Z" /></svg>`, className: '', iconSize: [32, 32], iconAnchor: [16, 16] });
         
         const pickupIcon = L.divIcon({ html: `<img src="${BLUE_PIN_SVG}" class="w-8 h-8">`, className: '', iconSize: [32, 32], iconAnchor: [16, 32] });
@@ -483,7 +496,8 @@
             try {
                 const userCredential = await signInAnonymously(auth);
                 passengerInfo = { name, phone };
-                await set(ref(db, `passengers/${userCredential.user.uid}`), passengerInfo);
+                // IMPORTANT: Use UPDATE instead of SET to avoid wiping out child nodes (completedTrips)
+                await update(ref(db, `passengers/${userCredential.user.uid}`), passengerInfo);
             } catch (e) {
                 alert("Login Error: " + e.message);
             }
@@ -503,11 +517,11 @@
             if(target === 'pickup') {
                 dom.pinImage.src = BLUE_PIN_SVG;
                 dom.confirmBtnText.innerText = "ဤနေရာတွင် လာကြိုပါ";
-                dom.confirmMapPickBtn.className = dom.confirmMapPickBtn.className.replace('bg-red-600', 'bg-blue-600').replace('hover:bg-red-700', 'hover:bg-blue-700');
+                dom.confirmMapPickBtn.className = dom.confirmMapPickBtn.className.replace('bg-red-600', 'bg-theme').replace('hover:bg-red-700', 'hover-bg-theme');
             } else {
                 dom.pinImage.src = RED_PIN_SVG;
                 dom.confirmBtnText.innerText = "ဤနေရာသို့ သွားမည်";
-                dom.confirmMapPickBtn.className = dom.confirmMapPickBtn.className.replace('bg-blue-600', 'bg-red-600').replace('hover:bg-blue-700', 'hover:bg-red-700');
+                dom.confirmMapPickBtn.className = dom.confirmMapPickBtn.className.replace('bg-theme', 'bg-red-600').replace('hover-bg-theme', 'hover:bg-red-700');
             }
         }
         
@@ -611,7 +625,7 @@
                                  </div>
                                  <div>
                                     <h3 class="font-bold text-slate-800">${d.name}</h3>
-                                    <p class="text-xs text-slate-500">${d.carModel} • <span class="text-blue-600 font-mono font-bold">${d.carPlate}</span></p>
+                                    <p class="text-xs text-slate-500">${d.carModel} • <span class="text-theme font-mono font-bold">${d.carPlate}</span></p>
                                  </div>
                             </div>
                             <span class="text-xs font-bold ${statusColor}">${statusText}</span>
@@ -621,7 +635,7 @@
                                 <div><p class="text-slate-400 text-xs">အကွာအဝေး</p><p class="font-semibold text-slate-700">${d.distKm} km</p></div>
                                 <div><p class="text-slate-400 text-xs">ခန့်မှန်းခ</p><p class="font-bold text-green-600">~${d.price.toLocaleString()} Ks</p></div>
                             </div>
-                            ${d.isAvailable ? `<button class="select-driver-btn bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded hover:bg-blue-500 shadow">ရွေးချယ်မည်</button>` : ''}
+                            ${d.isAvailable ? `<button class="select-driver-btn bg-theme text-white text-xs font-bold py-1 px-3 rounded hover-bg-theme shadow">ရွေးချယ်မည်</button>` : ''}
                         </div>
                     `;
                     if (d.isAvailable) {
@@ -701,7 +715,7 @@
 
             routeControl = L.Routing.control({
                 plan: plan,
-                lineOptions: { styles: [{color: '#3b82f6', opacity: 0.8, weight: 6}] },
+                lineOptions: { styles: [{color: '#45C9FF', opacity: 0.8, weight: 6}] },
                 addWaypoints: false, draggableWaypoints: false
             }).addTo(map);
 
@@ -897,7 +911,13 @@
                             showNotification("Pyapay", "ယာဉ်မောင်း ရောက်ရှိပါပြီ");
                             break;
                         case 'to_dropoff': updateTripStatusUI('to_dropoff'); break;
-                        case 'cancelled': alert('ခရီးစဉ် ပယ်ဖျက်လိုက်ပါသည်။'); resetToMainView(); break;
+                        case 'cancelled': 
+                            alert('ခရီးစဉ် ပယ်ဖျက်လိုက်ပါသည်။'); 
+                            // Ensure it's saved to history even if cancelled by driver/admin
+                            const cancelledTrip = { ...activeTrip, status: 'cancelled', completedAt: Date.now() };
+                            await set(ref(db, `passengers/${currentUser.uid}/completedTrips/${activeTrip.id}`), cancelledTrip);
+                            resetToMainView(); 
+                            break;
                      }
                 }
             });
@@ -936,7 +956,7 @@
                     routeControl = L.Routing.control({
                         waypoints: [ startPoint, L.latLng(activeTrip.dropoff.lat, activeTrip.dropoff.lng) ],
                         createMarker: () => null, addWaypoints: false, fitSelectedRoutes: false, 
-                        lineOptions: { styles: [{color: '#3b82f6', opacity: 0.8, weight: 6}] }
+                        lineOptions: { styles: [{color: '#45C9FF', opacity: 0.8, weight: 6}] }
                     }).addTo(map);
                 }
 
@@ -960,7 +980,7 @@
             if (status === 'searching') {
                 panel.innerHTML = `<div class="text-center p-4">
                     ${tokenHeader}
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#45C9FF] mx-auto mb-4"></div>
                     <h3 class="text-xl font-bold text-slate-800">Driver ရှာဖွေနေပါသည်...</h3>
                     <p class="text-slate-500 mt-2">${selectedDriverForBooking ? 'သင်ရွေးချယ်ထားသော ယာဉ်မောင်းကို ဆက်သွယ်နေသည်...' : 'အနီးဆုံး ယာဉ်မောင်းကို ရှာဖွေနေပါသည်'}</p>
                     <button id="cancel-trip-button" class="w-full bg-red-50 text-red-600 border border-red-200 font-bold py-3 mt-6 rounded-xl hover:bg-red-100 transition">ခရီးစဉ် ပယ်ဖျက်မည်</button>
@@ -970,7 +990,7 @@
                 const title = status === 'accepted' ? 'Driver ရောက်လာတော့မည်' : (status === 'at_pickup' ? 'ကားရောက်လာပါပြီ' : 'ခရီးစဉ်အတွင်း');
                 panel.innerHTML = `<div class="p-2 text-center">
                     ${tokenHeader}
-                    <h3 class="text-xl font-bold text-blue-600">${title}</h3>
+                    <h3 class="text-xl font-bold text-theme">${title}</h3>
                     ${status === 'accepted' ? '<p class="text-amber-500 font-semibold" id="driver-eta">အချိန် တွက်ချက်နေသည်...</p>' : ''}
                     <div class="bg-slate-50 border border-slate-100 p-4 rounded-xl mt-4">
                         <div class="w-16 h-16 rounded-full bg-slate-200 mx-auto mb-2 overflow-hidden">
@@ -980,7 +1000,7 @@
                         <p class="text-slate-500">${activeTrip.driverDetails?.carPlate || 'N/A'} - ${activeTrip.driverDetails?.carModel || 'Car'}</p>
                     </div>
                     <div class="flex justify-around mt-4 gap-4">
-                         <button id="chat-driver-button" class="relative bg-blue-100 text-blue-600 font-bold py-3 px-6 rounded-xl flex-1 hover:bg-blue-200 transition">Chat</button>
+                         <button id="chat-driver-button" class="relative bg-blue-100 text-theme font-bold py-3 px-6 rounded-xl flex-1 hover:bg-blue-200 transition">Chat</button>
                         <a href="tel:${activeTrip.driverDetails?.phone || passengerInfo.phone}" class="bg-green-100 text-green-600 font-bold py-3 px-6 rounded-xl flex-1 hover:bg-green-200 transition text-center">Call</a>
                     </div>
                 </div>`;
@@ -995,7 +1015,7 @@
                     ${tokenHeader}
                     <h3 class="text-2xl font-bold text-green-600">ခရီးစဉ် ပြီးဆုံးပါပြီ</h3>
                     <p class="text-lg mt-2 text-slate-700">ကျသင့်ငွေ: <span class="font-bold">${activeTrip.fare.toLocaleString()} Ks</span></p>
-                    <button id="close-summary-button" class="w-full bg-blue-600 text-white font-bold py-3 mt-6 rounded-xl shadow-lg shadow-blue-500/30">ပိတ်မည်</button>
+                    <button id="close-summary-button" class="w-full bg-theme text-white font-bold py-3 mt-6 rounded-xl shadow-lg shadow-blue-500/30">ပိတ်မည်</button>
                 </div>`;
                 document.getElementById('close-summary-button').onclick = resetToMainView;
             }
@@ -1003,7 +1023,12 @@
         
         async function cancelTrip() {
             if (!activeTrip || !activeTrip.id) return;
-            if (confirm('ခရီးစဉ်ကို ပယ်ဖျက်ရန် သေချာပါသလား?')) await update(ref(db, `trips/${activeTrip.id}`), { status: 'cancelled' });
+            if (confirm('ခရီးစဉ်ကို ပယ်ဖျက်ရန် သေချာပါသလား?')) {
+                // Save to history before removing/updating
+                const cancelledTrip = { ...activeTrip, status: 'cancelled', completedAt: Date.now() };
+                await set(ref(db, `passengers/${currentUser.uid}/completedTrips/${activeTrip.id}`), cancelledTrip);
+                await update(ref(db, `trips/${activeTrip.id}`), { status: 'cancelled' });
+            }
         }
         
         async function submitRating() {
@@ -1030,46 +1055,76 @@
         
         async function loadTripHistory() {
             const historyContent = document.getElementById('history-content');
-            historyContent.innerHTML = `<p class="text-slate-400 text-center">Loading...</p>`;
+            historyContent.innerHTML = `<div class="flex justify-center p-4"><div class="loading-spinner w-6 h-6 border-slate-300 border-t-theme"></div></div>`;
             
             try {
-                // Changed to fetch all trips without limit
+                // Fetch all trips
                 const snapshot = await get(ref(db, `passengers/${currentUser.uid}/completedTrips`));
                 historyContent.innerHTML = '';
                 
                 if (snapshot.exists()) {
                     const trips = [];
-                    snapshot.forEach(child => trips.push(child.val()));
-                    trips.sort((a,b) => b.completedAt - a.completedAt); // Newest first
+                    snapshot.forEach(child => {
+                        const t = child.val();
+                        if (t) trips.push(t);
+                    });
+                    
+                    // Robust sorting (handle missing dates)
+                    trips.sort((a,b) => {
+                        const timeA = a.completedAt || a.requestTime || 0;
+                        const timeB = b.completedAt || b.requestTime || 0;
+                        return timeB - timeA;
+                    }); 
 
                     trips.forEach(trip => {
-                        const pickupShort = trip.pickupAddress ? trip.pickupAddress.split(',')[0] : '...';
-                        const dropoffShort = trip.dropoffAddress ? trip.dropoffAddress.split(',')[0] : '...';
+                        // Safe Accessors
+                        const pickupAddr = trip.pickupAddress || (trip.pickup ? `${trip.pickup.lat.toFixed(4)}, ${trip.pickup.lng.toFixed(4)}` : 'Unknown');
+                        const dropoffAddr = trip.dropoffAddress || (trip.dropoff ? `${trip.dropoff.lat.toFixed(4)}, ${trip.dropoff.lng.toFixed(4)}` : 'Unknown');
+                        const pickupShort = pickupAddr.split(',')[0];
+                        const dropoffShort = dropoffAddr.split(',')[0];
                         
-                         historyContent.innerHTML += `<div class="bg-slate-50 p-3 rounded-xl border border-slate-100 mb-2">
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded font-bold">${trip.token || 'N/A'}</span>
-                                <p class="text-xs text-slate-400">${new Date(trip.completedAt).toLocaleDateString()}</p>
+                        let statusColor = 'text-slate-500';
+                        let priceDisplay = `${(trip.fare || 0).toLocaleString()} Ks`;
+                        let statusText = 'Completed';
+
+                        if (trip.status === 'cancelled') {
+                            statusColor = 'text-red-500';
+                            priceDisplay = 'Cancelled';
+                            statusText = 'Cancelled';
+                        } else if (trip.status === 'completed') {
+                            statusColor = 'text-green-600';
+                            statusText = 'Success';
+                        }
+
+                        const timestamp = trip.completedAt || trip.requestTime || Date.now();
+                        const dateObj = new Date(timestamp);
+                        const dateStr = !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A';
+                        
+                         historyContent.innerHTML += `<div class="bg-white p-3 rounded-xl border border-slate-200 mb-3 shadow-sm">
+                            <div class="flex justify-between items-center mb-2 border-b border-slate-50 pb-2">
+                                <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono font-bold tracking-wider">${trip.token || 'N/A'}</span>
+                                <span class="text-[10px] text-slate-400 font-medium">${dateStr}</span>
                             </div>
-                            <div class="space-y-1 mt-2">
-                                <div class="flex items-center gap-2">
-                                     <div class="w-2 h-2 rounded-full bg-blue-500"></div>
-                                     <p class="text-xs text-slate-600 truncate">${pickupShort}</p>
+                            <div class="space-y-2">
+                                <div class="flex items-start gap-2">
+                                     <div class="w-2 h-2 rounded-full bg-blue-500 mt-1 shrink-0"></div>
+                                     <p class="text-xs text-slate-600 line-clamp-1">${pickupShort}</p>
                                 </div>
-                                 <div class="flex items-center gap-2">
-                                     <div class="w-2 h-2 rounded-full bg-red-500"></div>
-                                     <p class="text-sm font-bold text-slate-800 truncate">${dropoffShort}</p>
+                                 <div class="flex items-start gap-2">
+                                     <div class="w-2 h-2 rounded-full ${trip.status === 'cancelled' ? 'bg-slate-300' : 'bg-red-500'} mt-1 shrink-0"></div>
+                                     <p class="text-sm font-bold text-slate-800 line-clamp-1">${dropoffShort}</p>
                                 </div>
                             </div>
-                            <div class="text-right mt-1">
-                                <p class="font-bold text-green-600">${(trip.fare || 0).toLocaleString()} Ks</p>
+                            <div class="flex justify-between items-end mt-3 pt-2 border-t border-slate-50">
+                                <span class="text-xs font-bold ${trip.status === 'cancelled' ? 'text-red-400 bg-red-50' : 'text-green-600 bg-green-50'} px-2 py-1 rounded">${statusText}</span>
+                                <p class="font-bold text-slate-800">${priceDisplay}</p>
                             </div>
                         </div>`;
                     });
                 } else historyContent.innerHTML = `<p class="text-slate-400 text-center py-8">ခရီးစဉ်မှတ်တမ်း မရှိပါ။</p>`;
             } catch (e) { 
                 console.error(e);
-                historyContent.innerHTML = `<p class="text-red-400 text-center py-8">မှတ်တမ်းရယူမရနိုင်ပါ</p>`; 
+                historyContent.innerHTML = `<div class="text-center py-8"><p class="text-red-400 mb-2">မှတ်တမ်းရယူမရနိုင်ပါ</p><button onclick="loadTripHistory()" class="text-blue-500 underline text-sm">ပြန်လည်ကြိုးစားပါ</button></div>`; 
             }
         }
         
@@ -1082,7 +1137,7 @@
         function showChatModal() {
             unreadMessages = 0; updateChatBadge();
             dom.chatModal.classList.remove('hidden');
-            dom.chatModal.innerHTML = `<div class="absolute inset-0 bg-black/60 z-30 flex justify-center items-end backdrop-blur-sm" id="chat-backdrop"><div class="bg-white rounded-t-2xl w-full max-w-md flex flex-col h-[85vh] shadow-2xl"><header class="flex items-center p-4 border-b border-slate-100"><button id="close-chat-button" class="p-2 -ml-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-slate-500"><polyline points="15 18 9 12 15 6"></polyline></svg></button><h2 class="text-xl font-bold text-slate-800 mx-auto">ယာဉ်မောင်းနှင့် စကားပြောရန်</h2><div class="w-10"></div></header><main id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50"></main><footer class="p-4 border-t border-slate-100 bg-white"><form id="chat-form" class="flex gap-2"><input id="chat-input" type="text" placeholder="စာရိုက်ပါ..." class="flex-1 bg-slate-100 rounded-full py-2 px-4 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"><button type="submit" class="bg-blue-600 rounded-full p-3 text-white shadow"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></button></form></footer></div></div>`;
+            dom.chatModal.innerHTML = `<div class="absolute inset-0 bg-black/60 z-30 flex justify-center items-end backdrop-blur-sm" id="chat-backdrop"><div class="bg-white rounded-t-2xl w-full max-w-md flex flex-col h-[85vh] shadow-2xl"><header class="flex items-center p-4 border-b border-slate-100"><button id="close-chat-button" class="p-2 -ml-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-slate-500"><polyline points="15 18 9 12 15 6"></polyline></svg></button><h2 class="text-xl font-bold text-slate-800 mx-auto">ယာဉ်မောင်းနှင့် စကားပြောရန်</h2><div class="w-10"></div></header><main id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50"></main><footer class="p-4 border-t border-slate-100 bg-white"><form id="chat-form" class="flex gap-2"><input id="chat-input" type="text" placeholder="စာရိုက်ပါ..." class="flex-1 bg-slate-100 rounded-full py-2 px-4 text-slate-800 focus:outline-none focus:ring-2 focus-ring-theme"><button type="submit" class="bg-theme rounded-full p-3 text-white shadow"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></button></form></footer></div></div>`;
             document.getElementById('close-chat-button').onclick = () => dom.chatModal.classList.add('hidden');
             document.getElementById('chat-backdrop').onclick = (e) => { if(e.target.id === 'chat-backdrop') dom.chatModal.classList.add('hidden'); };
             document.getElementById('chat-form').onsubmit = handleSendMessage;
@@ -1100,7 +1155,7 @@
                     unreadMessages++; updateChatBadge(); playDoubleBeep();
                     showNotification("Driver Message", msg.text);
                 }
-                chatMessagesEl.innerHTML += `<div class="flex items-end gap-2 ${msg.sender === 'passenger' ? 'justify-end' : 'justify-start'}"><div class="max-w-xs px-4 py-2 rounded-2xl ${msg.sender === 'passenger' ? 'bg-blue-600 text-white rounded-br-none shadow-md' : 'bg-white text-slate-800 rounded-bl-none shadow-sm border border-slate-100'}"><p>${msg.text}</p></div></div>`;
+                chatMessagesEl.innerHTML += `<div class="flex items-end gap-2 ${msg.sender === 'passenger' ? 'justify-end' : 'justify-start'}"><div class="max-w-xs px-4 py-2 rounded-2xl ${msg.sender === 'passenger' ? 'bg-theme text-white rounded-br-none shadow-md' : 'bg-white text-slate-800 rounded-bl-none shadow-sm border border-slate-100'}"><p>${msg.text}</p></div></div>`;
                 chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
             });
         }

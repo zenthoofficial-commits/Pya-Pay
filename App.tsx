@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ref, onChildAdded, query as dbQuery, orderByChild, equalTo, update, remove, onValue, set, serverTimestamp, get, off, limitToLast } from 'firebase/database';
 import { auth, db } from './services/firebase';
@@ -60,7 +61,7 @@ const QuickReplyPopup: React.FC<{onSend: (msg: string) => void, onOpenChat: () =
                 <div className="border-t border-gray-200 pt-2">
                      <button
                         onClick={onOpenChat}
-                        className="w-full text-center bg-blue-50 text-blue-600 p-2 rounded-lg hover:bg-blue-100 transition-colors text-sm font-semibold"
+                        className="w-full text-center bg-[#06B9FF] text-white p-2 rounded-lg hover:bg-[#05a0de] transition-colors text-sm font-semibold"
                     >
                         Chat Box ဖွင့်ပါ
                     </button>
@@ -602,7 +603,7 @@ const App: React.FC = () => {
   if (!location) return <LoadingScreen />;
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-blue-50 text-slate-800 font-sans">
+    <div className="relative h-screen w-screen overflow-hidden bg-[#06B9FF] text-slate-800 font-sans">
       <MapComponent ref={mapRef} userLocation={location} userHeading={heading} activeTrip={activeTrip} tripStage={tripStage} />
       
       {activeTrip && tripStage && !viewingTripSummary ? (
@@ -666,11 +667,11 @@ const App: React.FC = () => {
         <div className="absolute bottom-0 left-0 right-0 p-4 flex flex-col items-center space-y-2 pointer-events-none">
             <div className="w-full max-w-md pointer-events-auto">
                 {isOnline ? (
-                    <button onClick={handleGoOffline} className="w-full bg-green-600 text-white font-bold py-4 px-8 rounded-full shadow-lg hover:bg-green-500 transition-all duration-300 transform hover:scale-105">
+                    <button onClick={handleGoOffline} className="w-full bg-green-600 text-white font-bold py-4 px-8 rounded-full shadow-lg hover:bg-green-500 transition-all duration-300 transform hover:scale-105 border-2 border-white">
                         အော့ဖ်လိုင်း (Go Offline)
                     </button>
                 ) : (
-                    <button onClick={handleGoOnline} className="w-full bg-red-600 text-white font-bold py-4 px-8 rounded-full shadow-lg hover:bg-red-500 transition-all duration-300">
+                    <button onClick={handleGoOnline} className="w-full bg-red-600 text-white font-bold py-4 px-8 rounded-full shadow-lg hover:bg-red-500 transition-all duration-300 border-2 border-white">
                         အွန်လိုင်း (Go Online)
                     </button>
                 )}
@@ -698,7 +699,7 @@ const App: React.FC = () => {
 };
 
 const SOSButton: React.FC<{onClick: () => void}> = ({onClick}) => (
-    <button onClick={onClick} className="bg-red-600 p-3 rounded-full shadow-lg z-10 border border-red-400 hover:bg-red-500 transition-all animate-pulse">
+    <button onClick={onClick} className="bg-red-600 p-3 rounded-full shadow-lg z-10 border-2 border-white hover:bg-red-500 transition-all animate-pulse">
         <SOSIcon className="h-6 w-6 text-white" />
     </button>
 )
