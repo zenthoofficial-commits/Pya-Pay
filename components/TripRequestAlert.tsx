@@ -31,7 +31,10 @@ const TripRequestAlert: React.FC<TripRequestAlertProps> = ({ trip, onAccept, onD
                  <h2 className={`text-xl font-extrabold ${isDirectRequest ? 'text-amber-500' : 'text-blue-600'}`}>
                     {isDirectRequest ? 'Direct Booking!' : 'Trip Request'}
                  </h2>
-                 {isDirectRequest && <p className="text-xs text-slate-500">Passenger chose you directly</p>}
+                 <p className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded inline-block mt-1 font-bold border border-slate-200">
+                    Token: {(trip as any).token || 'N/A'}
+                 </p>
+                 {isDirectRequest && <p className="text-xs text-slate-500 mt-1">Passenger chose you directly</p>}
             </div>
           <div className={`${isDirectRequest ? 'bg-amber-100 text-amber-500' : 'bg-blue-100 text-blue-500'} p-2 rounded-full animate-pulse`}>
             <AlarmIcon className="h-6 w-6" />
@@ -76,3 +79,4 @@ const TripRequestAlert: React.FC<TripRequestAlertProps> = ({ trip, onAccept, onD
 };
 
 export default TripRequestAlert;
+    

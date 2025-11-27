@@ -60,6 +60,8 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .tab-active { border-color: #3b82f6; color: #3b82f6; }
+        .star-rating span { font-size: 2rem; cursor: pointer; color: #cbd5e1; transition: color 0.2s; }
+        .star-rating span.active { color: #f59e0b; }
     </style>
 </head>
 <body class="text-slate-800">
@@ -188,6 +190,19 @@
         </div>
     </div>
 
+    <!-- Rating Modal -->
+    <div id="rating-modal" class="hidden absolute inset-0 bg-black/70 z-50 flex justify-center items-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-6 text-center shadow-2xl">
+            <h3 class="text-xl font-bold text-slate-800 mb-2">ခရီးစဉ် ပြီးဆုံးပါပြီ</h3>
+            <p class="text-slate-500 mb-6">ယာဉ်မောင်းအား အမှတ်ပေးပါ</p>
+            <div class="star-rating flex justify-center gap-2 mb-6" id="star-rating">
+                <span data-val="1">★</span><span data-val="2">★</span><span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span>
+            </div>
+            <button id="submit-rating-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-blue-700">အမှတ်ပေးမည်</button>
+            <button id="skip-rating-btn" class="mt-3 text-slate-400 hover:text-slate-600 font-semibold text-sm">ကျော်သွားမည်</button>
+        </div>
+    </div>
+
     <!-- Modals -->
     <div id="chat-modal" class="hidden"></div>
     <div id="schedule-modal" class="hidden absolute inset-0 bg-black/60 z-30 flex justify-center items-center p-4 backdrop-blur-sm"></div>
@@ -200,13 +215,14 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getDatabase, ref, set, get, onValue, off, remove, query, orderByChild, equalTo, onChildAdded, serverTimestamp, update, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
+        // Separate App Name to avoid conflict with Admin Panel if run in same browser
         const firebaseConfig = { apiKey: "AIzaSyB7zSpZMYgS2SChtyFrUvvp0txPutecF3g", authDomain: "zenstride.firebaseapp.com", databaseURL: "https://zenstride-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "zenstride", storageBucket: "zenstride.firebasestorage.app", messagingSenderId: "588697035765", appId: "1:588697035765:web:9411ea5aa9588ceb7d36bc" };
-        const app = initializeApp(firebaseConfig);
+        const app = initializeApp(firebaseConfig, "passengerApp"); 
         const auth = getAuth(app);
         const db = getDatabase(app);
 
         let map, userMarker, routeControl, driverRouteControl;
-        let driverMarkers = {};
+        let activeDriverMarker = null; // Changed from driverMarkers object to single marker
         let currentUser = null, passengerInfo = null, currentLocation = null, activeTrip = null;
         let pickupLocation = null, dropoffLocation = null;
         let tripListener = null, driverLocationListener = null, chatListener = null, nearbyDriversListener = null;
@@ -216,6 +232,7 @@
         let unreadMessages = 0;
         let driversListLastUpdate = 0;
         let pricingSettings = { baseFare: 1500, pricePerKm: 500 };
+        let currentRating = 0;
         
         // Sounds
         const messageSound = new Audio("data:audio/wav;base64,UklGRlFFT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YUFENQDI7PAA8gDwAPUA9ADzAPIBAAIEAwQDBAIBAAAAAP8A/gD4APUA8gDxAPIA8gDzAO8A7ADoAN4A2gDYANoA3gDkAO0A9AEAAv9//wD+APwA+gD7AP0AAQIDBAUGBwgJCgsMDQ4PDxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==");
@@ -242,7 +259,8 @@
             nearbyDriversPanel: document.getElementById('nearby-drivers-panel'),
             driversList: document.getElementById('drivers-list'),
             directBookingAlert: document.getElementById('direct-booking-alert'),
-            recenterBtn: document.getElementById('recenter-btn')
+            recenterBtn: document.getElementById('recenter-btn'),
+            ratingModal: document.getElementById('rating-modal')
         };
         
         const userIcon = L.divIcon({ html: `<div class="w-6 h-6 bg-blue-500 rounded-full border-2 border-white pulse shadow-lg"></div>`, className: '', iconSize: [24, 24], iconAnchor: [12, 12] });
@@ -278,6 +296,7 @@
                         fetchSettings();
                         await checkForActiveTrip(user.uid);
                     } else {
+                        // User exists but no profile (rare case or first partial login)
                         dom.loginScreen.classList.remove('hidden');
                         dom.mainUI.classList.add('hidden');
                     }
@@ -344,6 +363,19 @@
             dom.recenterBtn.addEventListener('click', () => {
                 if (currentLocation && map) map.setView(currentLocation, 17);
             });
+            
+            // Rating
+            document.querySelectorAll('.star-rating span').forEach(star => {
+                star.onclick = (e) => {
+                    const val = parseInt(e.target.dataset.val);
+                    currentRating = val;
+                    document.querySelectorAll('.star-rating span').forEach(s => {
+                         s.classList.toggle('active', parseInt(s.dataset.val) <= val);
+                    });
+                }
+            });
+            document.getElementById('submit-rating-btn').onclick = submitRating;
+            document.getElementById('skip-rating-btn').onclick = () => { dom.ratingModal.classList.add('hidden'); resetToMainView(); };
         }
 
         function handleLogout() { signOut(auth).then(() => window.location.reload()); }
@@ -360,9 +392,15 @@
             const name = document.getElementById('passenger-name').value;
             const phone = document.getElementById('passenger-phone').value;
             if (!name || !phone) return alert('အမည်နှင့် ဖုန်းနံပါတ် ဖြည့်စွက်ပေးပါ။');
-            const userCredential = await signInAnonymously(auth);
-            passengerInfo = { name, phone };
-            await set(ref(db, `passengers/${userCredential.user.uid}`), passengerInfo);
+            
+            try {
+                const userCredential = await signInAnonymously(auth);
+                passengerInfo = { name, phone };
+                await set(ref(db, `passengers/${userCredential.user.uid}`), passengerInfo);
+                // onAuthStateChanged will handle the rest
+            } catch (e) {
+                alert("Login Error: " + e.message);
+            }
         }
 
         function startAppFlow() { 
@@ -376,24 +414,9 @@
 
             nearbyDriversListener = onValue(driversRef, (snapshot) => {
                 const driversData = snapshot.val() || {};
-                const availableDriverIds = new Set();
-
-                Object.entries(driversData).forEach(async ([driverId, driverData]) => {
-                    availableDriverIds.add(driverId);
-                    if (driverMarkers[driverId]) {
-                        driverMarkers[driverId].setLatLng([driverData.lat, driverData.lng]);
-                        driverMarkers[driverId].setIcon(driverIcon(driverData.heading));
-                    } else {
-                        driverMarkers[driverId] = L.marker([driverData.lat, driverData.lng], { icon: driverIcon(driverData.heading) }).addTo(map);
-                    }
-                });
                 
-                Object.keys(driverMarkers).forEach(driverId => {
-                    if (!availableDriverIds.has(driverId)) {
-                        driverMarkers[driverId].remove();
-                        delete driverMarkers[driverId];
-                    }
-                });
+                // NOTE: We do NOT add markers to the map here anymore.
+                // We only use this data to calculate nearby drivers for the list.
                 
                 if(!dom.nearbyDriversPanel.classList.contains('hidden')) {
                     const now = Date.now();
@@ -554,8 +577,14 @@
 
         async function handleConfirmRide(isScheduled, scheduleTime = null) {
             const tripId = `trip_${Date.now()}_${currentUser.uid}`;
+            // Generate Trip Token (e.g., T-1234)
+            const token = `T-${Math.floor(1000 + Math.random() * 9000)}`;
+
             activeTrip = {
-                id: tripId, passengerId: currentUser.uid, passengerPhone: passengerInfo.phone,
+                id: tripId, 
+                token: token,
+                passengerId: currentUser.uid, 
+                passengerPhone: passengerInfo.phone,
                 pickup: pickupLocation, dropoff: dropoffLocation,
                 pickupAddress: pickupLocation.address, dropoffAddress: dropoffLocation.address,
                 fare: calculateFare(currentFareDetails.distance, selectedVehicleType),
@@ -573,7 +602,7 @@
             await set(ref(db, `trips/${tripId}`), activeTrip);
             
             if (isScheduled) {
-                alert(`ခရီးစဉ်မှတ်သားထားလိုက်ပါပြီ။`);
+                alert(`ခရီးစဉ်မှတ်သားထားလိုက်ပါပြီ။ Token: ${token}`);
                 resetToMainView();
                 return;
             }
@@ -625,6 +654,15 @@
             driverLocationListener = onValue(driverLocRef, (snapshot) => {
                 if (!snapshot.exists() || !activeTrip) return;
                 const loc = snapshot.val();
+                
+                // Show specific driver on map now
+                if (activeDriverMarker) {
+                    activeDriverMarker.setLatLng([loc.lat, loc.lng]);
+                    activeDriverMarker.setIcon(driverIcon(loc.heading));
+                } else {
+                    activeDriverMarker = L.marker([loc.lat, loc.lng], { icon: driverIcon(loc.heading) }).addTo(map);
+                }
+
                 if (routeControl) map.removeControl(routeControl);
                 if (driverRouteControl) map.removeControl(driverRouteControl);
 
@@ -662,8 +700,13 @@
         function updateTripStatusUI(status, data = {}) {
             const panel = dom.tripStatusPanel;
             panel.innerHTML = '';
+            
+            // Show Token Header
+            const tokenHeader = activeTrip && activeTrip.token ? `<div class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold w-fit mx-auto mb-2 border border-blue-200">Trip Token: ${activeTrip.token}</div>` : '';
+
             if (status === 'searching') {
                 panel.innerHTML = `<div class="text-center p-4">
+                    ${tokenHeader}
                     <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                     <h3 class="text-xl font-bold text-slate-800">Driver ရှာဖွေနေပါသည်...</h3>
                     <p class="text-slate-500 mt-2">${selectedDriverForBooking ? 'သင်ရွေးချယ်ထားသော ယာဉ်မောင်းကို ဆက်သွယ်နေသည်...' : 'အနီးဆုံး ယာဉ်မောင်းကို ရှာဖွေနေပါသည်'}</p>
@@ -673,6 +716,7 @@
             } else if (status === 'accepted' || status === 'at_pickup' || status === 'to_dropoff') {
                 const title = status === 'accepted' ? 'Driver ရောက်လာတော့မည်' : (status === 'at_pickup' ? 'ကားရောက်လာပါပြီ' : 'ခရီးစဉ်အတွင်း');
                 panel.innerHTML = `<div class="p-2 text-center">
+                    ${tokenHeader}
                     <h3 class="text-xl font-bold text-blue-600">${title}</h3>
                     ${status === 'accepted' ? '<p class="text-amber-500 font-semibold" id="driver-eta">Calculating ETA...</p>' : ''}
                     <div class="bg-slate-50 border border-slate-100 p-4 rounded-xl mt-4">
@@ -687,7 +731,17 @@
                 document.getElementById('chat-driver-button').onclick = showChatModal;
                 updateChatBadge();
             } else if (status === 'completed') {
-                panel.innerHTML = `<div class="text-center p-4"><h3 class="text-2xl font-bold text-green-600">ခရီးစဉ် ပြီးဆုံးပါပြီ</h3><p class="text-lg mt-2 text-slate-700">ကျသင့်ငွေ: <span class="font-bold">${activeTrip.fare.toLocaleString()} Ks</span></p><button id="close-summary-button" class="w-full bg-blue-600 text-white font-bold py-3 mt-6 rounded-xl shadow-lg shadow-blue-500/30">ပိတ်မည်</button></div>`;
+                // Show Rating Modal immediately when completed
+                dom.ratingModal.classList.remove('hidden');
+                currentRating = 0;
+                document.querySelectorAll('.star-rating span').forEach(s => s.classList.remove('active'));
+                
+                panel.innerHTML = `<div class="text-center p-4">
+                    ${tokenHeader}
+                    <h3 class="text-2xl font-bold text-green-600">ခရီးစဉ် ပြီးဆုံးပါပြီ</h3>
+                    <p class="text-lg mt-2 text-slate-700">ကျသင့်ငွေ: <span class="font-bold">${activeTrip.fare.toLocaleString()} Ks</span></p>
+                    <button id="close-summary-button" class="w-full bg-blue-600 text-white font-bold py-3 mt-6 rounded-xl shadow-lg shadow-blue-500/30">ပိတ်မည်</button>
+                </div>`;
                 document.getElementById('close-summary-button').onclick = resetToMainView;
             }
         }
@@ -695,6 +749,21 @@
         async function cancelTrip() {
             if (!activeTrip || !activeTrip.id) return;
             if (confirm('ခရီးစဉ်ကို ပယ်ဖျက်ရန် သေချာပါသလား?')) await update(ref(db, `trips/${activeTrip.id}`), { status: 'cancelled' });
+        }
+        
+        async function submitRating() {
+            if(currentRating === 0) return alert('ကျေးဇူးပြု၍ အမှတ်ပေးပါ');
+            if(activeTrip && activeTrip.driverId) {
+                // We'll just push the rating to a list for the driver
+                await push(ref(db, `drivers/${activeTrip.driverId}/ratings`), {
+                    stars: currentRating,
+                    tripId: activeTrip.id,
+                    timestamp: serverTimestamp()
+                });
+                alert('အမှတ်ပေးမှုအတွက် ကျေးဇူးတင်ပါသည်!');
+            }
+            dom.ratingModal.classList.add('hidden');
+            resetToMainView();
         }
 
         function showProfile() {
@@ -715,7 +784,16 @@
                 if (snapshot.exists()) {
                     const trips = []; snapshot.forEach(c => trips.push(c.val()));
                     trips.reverse().forEach(trip => {
-                         historyContent.innerHTML += `<div class="bg-slate-50 p-3 rounded-xl border border-slate-100 mb-2"><div class="flex justify-between items-center"><p class="font-bold text-slate-700 truncate max-w-[70%] text-sm">${(trip.dropoffAddress || "Unknown").split(',')[0]}</p><p class="font-bold text-green-600">${(trip.fare || 0).toLocaleString()} Ks</p></div><p class="text-xs text-slate-400 mt-1">${new Date(trip.completedAt).toLocaleString()}</p></div>`;
+                         historyContent.innerHTML += `<div class="bg-slate-50 p-3 rounded-xl border border-slate-100 mb-2">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded font-bold">${trip.token || 'N/A'}</span>
+                                <p class="text-xs text-slate-400">${new Date(trip.completedAt).toLocaleString()}</p>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <p class="font-bold text-slate-700 truncate max-w-[70%] text-sm">${(trip.dropoffAddress || "Unknown").split(',')[0]}</p>
+                                <p class="font-bold text-green-600">${(trip.fare || 0).toLocaleString()} Ks</p>
+                            </div>
+                        </div>`;
                     });
                 } else historyContent.innerHTML = `<p class="text-slate-400 text-center py-8">ခရီးစဉ်မှတ်တမ်း မရှိပါ။</p>`;
             } catch (e) { historyContent.innerHTML = `<p class="text-red-400 text-center py-8">Error loading history.</p>`; }
@@ -785,6 +863,7 @@
             if (activeTrip && chatListener) off(ref(db, `chats/${activeTrip.id}/messages`), 'child_added', chatListener);
             if (routeControl) { map.removeControl(routeControl); routeControl = null; map.setView(currentLocation, 16); }
             if (driverRouteControl) { map.removeControl(driverRouteControl); driverRouteControl = null; }
+            if (activeDriverMarker) { activeDriverMarker.remove(); activeDriverMarker = null; }
             if (fullReset) { selectedDriverForBooking = null; dom.directBookingAlert.classList.add('hidden'); }
             activeTrip = null; tripListener = null; driverLocationListener = null; chatListener = null;
             pickupLocation = null; dropoffLocation = null;

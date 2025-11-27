@@ -121,6 +121,7 @@ const App: React.FC = () => {
   const [showQuickReplies, setShowQuickReplies] = useState(false);
   const [lastSentMessage, setLastSentMessage] = useState<string | null>(null);
   const [cancellationAlert, setCancellationAlert] = useState<{ show: boolean; fee: number | null }>({ show: false, fee: null });
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const tripRequestAudioRef = useRef<HTMLAudioElement | null>(null);
   const locationRef = useRef(location);
@@ -148,6 +149,7 @@ const App: React.FC = () => {
         setTripStage(null);
         setIsDataLoaded(false);
         setTripRequests([]);
+        setIsProcessing(false);
 
         if (currentUser) {
             const currentDriverId = currentUser.uid;
@@ -278,10 +280,6 @@ const App: React.FC = () => {
     });
 
     tripHistory.forEach(trip => {
-        // Calculate based on dynamic rates, but preferably utilize stored values on trip if available
-        // For new trips, we store the commissionAmount. For legacy, we compute.
-        // Formula: platformFee + ((fare - platformFee) * rate/100)
-        
         let deduction = 0;
         // @ts-ignore - Check if trip has stored commission data
         if (trip.commissionAmount) {
@@ -390,9 +388,13 @@ const App: React.FC = () => {
   }, [location, heading, isOnline, driverId, activeTrip]);
 
   const handleAcceptTrip = async (tripId: string) => {
-    if (!driverId) return;
+    if (!driverId || isProcessing) return;
+    setIsProcessing(true);
     const tripToAccept = tripRequests.find(t => t.id === tripId);
-    if (!tripToAccept) return;
+    if (!tripToAccept) {
+        setIsProcessing(false);
+        return;
+    }
     setActiveTrip(tripToAccept);
     setTripStage('to_pickup');
     setTripRequests([]);
@@ -406,6 +408,8 @@ const App: React.FC = () => {
         alert("Trip could not be accepted. Please try again.");
         setActiveTrip(null);
         setTripStage(null);
+    } finally {
+        setIsProcessing(false);
     }
   };
   
@@ -440,29 +444,38 @@ const App: React.FC = () => {
   };
   
   const handleArrivedAtPickup = async () => {
-    if (!activeTrip) return;
+    if (!activeTrip || isProcessing) return;
+    setIsProcessing(true);
     try {
         const tripRef = ref(db, `trips/${activeTrip.id}`);
         await update(tripRef, { status: 'at_pickup' });
         setTripStage('at_pickup');
     } catch (e) {
         console.error("Failed to update trip status to at_pickup:", e);
+    } finally {
+        setIsProcessing(false);
     }
   };
 
   const handleStartTrip = async () => {
-    if (!activeTrip) return;
+    if (!activeTrip || isProcessing) return;
+    setIsProcessing(true);
     try {
         const tripRef = ref(db, `trips/${activeTrip.id}`);
         await update(tripRef, { status: 'to_dropoff' });
         setTripStage('to_dropoff');
     } catch (e) {
         console.error("Failed to update trip status to to_dropoff:", e);
+    } finally {
+        setIsProcessing(false);
     }
   };
 
   const handleCompleteTrip = async () => {
-    if (activeTrip && driverId) {
+    if (!activeTrip || !driverId || isProcessing) return;
+    setIsProcessing(true);
+    
+    try {
         // Calculate commission to snapshot it
         const commissionAmount = fees.platformFee + Math.round((activeTrip.fare - fees.platformFee) * (fees.commissionRate / 100));
 
@@ -487,6 +500,11 @@ const App: React.FC = () => {
 
         setViewingTripSummary(completedTrip);
         setOnTripUIVisible(true);
+    } catch (error) {
+        console.error("Error completing trip:", error);
+        alert("ခရီးစဉ် ပြီးဆုံးအောင် ဆောင်ရွက်ရာတွင် အမှားအယွင်းရှိနေပါသည်။ အင်တာနက်ချိတ်ဆက်မှုကို စစ်ဆေးပါ။");
+    } finally {
+        setIsProcessing(false);
     }
   };
   
@@ -557,6 +575,7 @@ const App: React.FC = () => {
               setOnTripUIVisible(v => !v);
               setShowQuickReplies(false);
           }}
+          isLoading={isProcessing}
         />
       ) : (
          <Header balance={balance} onProfileClick={() => setShowProfile(true)} onWalletClick={() => setShowEarnings(true)} />

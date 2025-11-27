@@ -36,6 +36,7 @@
         
         .tab-btn.active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
         .noti-badge { background-color: #ef4444; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 9999px; font-weight: bold; margin-left: auto; }
+        .driver-pending-dot { width: 8px; height: 8px; background-color: #ef4444; border-radius: 50%; display: inline-block; margin-left: 5px; box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3); }
     </style>
 </head>
 <body class="text-sm h-screen overflow-hidden flex flex-col">
@@ -129,7 +130,15 @@
                 <div id="trips-view" class="view-content hidden space-y-6">
                     <div class="card rounded-xl overflow-hidden shadow-sm">
                         <table class="w-full text-left">
-                            <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-bold border-b border-slate-200"><tr><th class="p-4">Time</th><th class="p-4">Route</th><th class="p-4">Fare</th><th class="p-4">Status</th></tr></thead>
+                            <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-bold border-b border-slate-200">
+                                <tr>
+                                    <th class="p-4">Token</th>
+                                    <th class="p-4">Time</th>
+                                    <th class="p-4">Route</th>
+                                    <th class="p-4">Fare</th>
+                                    <th class="p-4">Status</th>
+                                </tr>
+                            </thead>
                             <tbody id="trips-list-table" class="divide-y divide-slate-100 text-sm"></tbody>
                         </table>
                     </div>
@@ -209,7 +218,6 @@
     <div id="add-driver-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg border border-slate-200 p-6">
              <h3 class="text-xl font-bold text-slate-800 mb-4">Add Driver Account</h3>
-             <p class="text-xs text-amber-600 bg-amber-50 p-2 rounded mb-4">⚠️ Creating an account will log you out of the Admin panel. You will need to log back in as Admin.</p>
              <form id="add-driver-form" class="space-y-3">
                  <input name="name" placeholder="Name" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
                  <input name="nrc" placeholder="NRC (e.g., 12/OkTaNa(N)123456)" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
@@ -243,6 +251,8 @@
         let isMeasuring = false;
         let currentDriverId = null;
         let driversCache = {};
+        let transactionsCache = {};
+
         const dom = {
             loginScreen: document.getElementById('login-screen'),
             dashboard: document.getElementById('dashboard'),
@@ -261,7 +271,6 @@
                     initData();
                     initMap();
                 } else {
-                    // Check if it's a freshly created driver (not admin) to avoid loop
                     signOut(auth); 
                 }
             } else {
@@ -326,21 +335,22 @@
             
             // Listen to all transactions to count pending requests for notification
             onValue(ref(db, 'transactions'), snap => {
-                if(snap.exists()) {
-                    let pendingCount = 0;
-                    Object.values(snap.val()).forEach(driverTxs => {
-                        Object.values(driverTxs).forEach(tx => {
-                            if(tx.status === 'pending' && tx.type === 'topup') pendingCount++;
-                        });
+                transactionsCache = snap.val() || {};
+                let pendingCount = 0;
+                Object.values(transactionsCache).forEach(driverTxs => {
+                    Object.values(driverTxs).forEach(tx => {
+                        if(tx.status === 'pending' && tx.type === 'topup') pendingCount++;
                     });
-                    const badge = document.getElementById('drivers-badge');
-                    if(pendingCount > 0) {
-                        badge.innerText = pendingCount;
-                        badge.classList.remove('hidden');
-                    } else {
-                        badge.classList.add('hidden');
-                    }
+                });
+                const badge = document.getElementById('drivers-badge');
+                if(pendingCount > 0) {
+                    badge.innerText = pendingCount;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
                 }
+                // Re-render drivers to update dots
+                renderDrivers(driversCache);
             });
 
             // Settings Load
@@ -368,10 +378,20 @@
             const tbody = document.getElementById('drivers-table'); tbody.innerHTML = '';
             Object.entries(drivers).forEach(([uid, d]) => {
                 const isBanned = d.bannedUntil && d.bannedUntil > Date.now();
+                
+                // Check pending topup for this driver
+                let hasPending = false;
+                if (transactionsCache[uid]) {
+                    hasPending = Object.values(transactionsCache[uid]).some(tx => tx.status === 'pending' && tx.type === 'topup');
+                }
+
                 const tr = document.createElement('tr');
                 tr.className = `border-b border-slate-100 hover:bg-slate-50 ${isBanned ? 'bg-red-50' : ''}`;
                 tr.innerHTML = `
-                    <td class="p-4 font-bold text-slate-800">${d.name}</td>
+                    <td class="p-4 font-bold text-slate-800">
+                        ${d.name}
+                        ${hasPending ? '<span class="driver-pending-dot" title="Pending Top-up"></span>' : ''}
+                    </td>
                     <td class="p-4 text-slate-500 font-mono text-xs">${d.nrc || 'N/A'}</td>
                     <td class="p-4 text-slate-500">${d.carModel} <span class="text-blue-600 font-mono text-xs">${d.carPlate}</span></td>
                     <td class="p-4">
@@ -391,6 +411,7 @@
             trips.sort((a,b) => b.createdAt - a.createdAt).slice(0, 50).forEach(t => {
                 tbody.innerHTML += `
                     <tr class="border-b border-slate-100 text-slate-600">
+                        <td class="p-4 font-mono font-bold text-blue-600">${t.token || '-'}</td>
                         <td class="p-4">${new Date(t.createdAt).toLocaleTimeString()}</td>
                         <td class="p-4 max-w-xs truncate">${t.pickupAddress ? t.pickupAddress.split(',')[0] : '...'} -> ${t.dropoffAddress ? t.dropoffAddress.split(',')[0] : '...'}</td>
                         <td class="p-4 font-mono font-bold text-slate-800">${t.fare}</td>
@@ -668,11 +689,17 @@
             const f = new FormData(e.target);
             const d = Object.fromEntries(f.entries());
              try {
-                // Create user using Firebase Auth
-                const userCredential = await createUserWithEmailAndPassword(auth, d.email, d.password);
+                // Use a SECONDARY app instance to create the user so the Admin stays logged in
+                const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
+                const secondaryAuth = getAuth(secondaryApp);
+                const userCredential = await createUserWithEmailAndPassword(secondaryAuth, d.email, d.password);
                 const uid = userCredential.user.uid;
+                
+                // Sign out of secondary auth to clean up
+                await signOut(secondaryAuth);
+                // Note: The main 'auth' object (Admin) remains logged in
 
-                // Save driver details to Realtime Database
+                // Save driver details to Realtime Database using the main 'db' (Admin access)
                 await set(ref(db, `drivers/${uid}`), { 
                     ...d, 
                     isOnline: false, 
@@ -680,7 +707,7 @@
                 });
                 
                 closeModal('add-driver-modal');
-                alert(`Driver Created Successfully!\n\nYou have been logged out because you created a new user session. Please log back in as Admin.`);
+                alert(`Driver Account Created Successfully!`);
                 
             } catch(err) { 
                 console.error(err);
@@ -691,3 +718,4 @@
     </script>
 </body>
 </html>
+    

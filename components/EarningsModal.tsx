@@ -169,7 +169,10 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ onClose, balance, tripHis
                                 <div className="flex items-center gap-3">
                                     <div className="bg-red-100 p-2 rounded-full"><WalletIcon className="w-5 h-5 text-red-500"/></div>
                                     <div>
-                                        <p className="font-semibold text-slate-700 text-sm">Commission & Fee</p>
+                                        <div className="flex items-center gap-1">
+                                            <p className="font-semibold text-slate-700 text-sm">Commission & Fee</p>
+                                            <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 rounded font-bold">{(trip as any).token}</span>
+                                        </div>
                                         <p className="text-xs text-gray-500">{getShortLocationName(trip.dropoffAddress)}</p>
                                     </div>
                                 </div>
@@ -231,3 +234,4 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ onClose, balance, tripHis
 };
 
 export default EarningsModal;
+    

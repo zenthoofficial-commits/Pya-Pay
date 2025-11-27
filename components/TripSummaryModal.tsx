@@ -43,7 +43,8 @@ const TripSummaryModal: React.FC<TripSummaryModalProps> = ({ trip, onClose, comm
                         </svg>
                     </div>
                     <h2 className="text-2xl font-extrabold text-slate-800">Trip Completed!</h2>
-                    <p className="text-slate-500">Income Breakdown</p>
+                    <p className="text-sm font-bold bg-blue-50 text-blue-600 inline-block px-3 py-1 rounded-full mt-2">Token: {(trip as any).token || 'N/A'}</p>
+                    <p className="text-slate-500 mt-1">Income Breakdown</p>
                 </div>
 
                 <div className="bg-gray-50 rounded-xl p-4 space-y-1 border border-gray-100">
@@ -78,3 +79,4 @@ const TripSummaryModal: React.FC<TripSummaryModalProps> = ({ trip, onClose, comm
 };
 
 export default TripSummaryModal;
+    

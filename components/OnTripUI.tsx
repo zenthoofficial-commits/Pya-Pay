@@ -15,9 +15,10 @@ interface OnTripUIProps {
   lastSentMessage: string | null;
   isVisible: boolean;
   onToggleVisibility: () => void;
+  isLoading?: boolean;
 }
 
-const OnTripUI: React.FC<OnTripUIProps> = ({ trip, tripStage, onArrivedAtPickup, onStartTrip, onCompleteTrip, onOpenChat, lastSentMessage, isVisible, onToggleVisibility }) => {
+const OnTripUI: React.FC<OnTripUIProps> = ({ trip, tripStage, onArrivedAtPickup, onStartTrip, onCompleteTrip, onOpenChat, lastSentMessage, isVisible, onToggleVisibility, isLoading = false }) => {
   
   const getStageDetails = () => {
     switch(tripStage) {
@@ -26,7 +27,7 @@ const OnTripUI: React.FC<OnTripUIProps> = ({ trip, tripStage, onArrivedAtPickup,
           title: "Going to Pickup",
           addressLabel: "PICKUP LOCATION",
           address: getCleanAddress(trip.pickupAddress),
-          buttonText: "Arrived at Pickup",
+          buttonText: isLoading ? "Processing..." : "Arrived at Pickup",
           buttonAction: onArrivedAtPickup,
           colorClass: "bg-amber-500 hover:bg-amber-600"
         };
@@ -35,7 +36,7 @@ const OnTripUI: React.FC<OnTripUIProps> = ({ trip, tripStage, onArrivedAtPickup,
           title: "Waiting for Passenger",
           addressLabel: "PICKUP LOCATION",
           address: getCleanAddress(trip.pickupAddress),
-          buttonText: "Start Trip",
+          buttonText: isLoading ? "Starting Trip..." : "Start Trip",
           buttonAction: onStartTrip,
           colorClass: "bg-green-600 hover:bg-green-700"
         };
@@ -44,7 +45,7 @@ const OnTripUI: React.FC<OnTripUIProps> = ({ trip, tripStage, onArrivedAtPickup,
           title: "Driving to Dropoff",
           addressLabel: "DROPOFF LOCATION",
           address: getCleanAddress(trip.dropoffAddress),
-          buttonText: "Complete Trip",
+          buttonText: isLoading ? "ပြီးဆုံးအောင် လုပ်ဆောင်နေသည်..." : "Complete Trip",
           buttonAction: onCompleteTrip,
           colorClass: "bg-blue-600 hover:bg-blue-700"
         };
@@ -75,7 +76,12 @@ const OnTripUI: React.FC<OnTripUIProps> = ({ trip, tripStage, onArrivedAtPickup,
     <div className={`absolute bottom-0 left-0 right-0 p-4 z-10 transition-transform duration-500 ease-in-out transform ${isVisible ? 'translate-y-0' : 'translate-y-[calc(100%-86px)]'}`}>
       <div className="bg-white rounded-2xl p-5 shadow-[0_-5px_20px_rgba(0,0,0,0.1)] border border-gray-100">
         <div onClick={onToggleVisibility} className="flex justify-between items-center mb-3 cursor-pointer" role="button" aria-expanded={isVisible}>
-            <h2 className="text-xl font-bold text-slate-800">{title}</h2>
+            <div className="flex items-center gap-2">
+                <h2 className="text-xl font-bold text-slate-800">{title}</h2>
+                <span className="bg-blue-50 text-blue-600 text-xs font-bold px-2 py-0.5 rounded border border-blue-100">
+                    Token: {(trip as any).token || 'N/A'}
+                </span>
+            </div>
             <div className="bg-gray-100 p-1 rounded-full">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`h-5 w-5 text-gray-500 transition-transform duration-300 ${isVisible ? 'rotate-180' : ''}`}>
                     <polyline points="18 15 12 9 6 15"></polyline>
@@ -115,7 +121,8 @@ const OnTripUI: React.FC<OnTripUIProps> = ({ trip, tripStage, onArrivedAtPickup,
         
         <button 
           onClick={buttonAction}
-          className={`w-full ${colorClass} text-white font-bold py-4 px-4 rounded-xl shadow-lg transition-transform active:scale-95`}
+          disabled={isLoading}
+          className={`w-full ${colorClass} text-white font-bold py-4 px-4 rounded-xl shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           {buttonText}
         </button>
