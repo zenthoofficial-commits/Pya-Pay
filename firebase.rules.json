@@ -9,7 +9,7 @@
       }
     },
     "settings": {
-      ".read": "auth != null",
+      ".read": true,
       ".write": "root.child('admins/' + auth.uid).exists()"
     },
     "drivers": {

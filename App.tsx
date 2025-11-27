@@ -268,10 +268,12 @@ const App: React.FC = () => {
     let currentBalance = 0;
 
     transactions.forEach(tx => {
-        if (tx.type === 'topup' && tx.status === 'approved') {
-            currentBalance += tx.amount;
-        } else if (tx.type === 'withdraw') {
-             currentBalance -= tx.amount;
+        if (tx.status === 'approved') {
+            if (tx.type === 'topup' || tx.type === 'credit') {
+                currentBalance += tx.amount;
+            } else if (tx.type === 'withdraw' || tx.type === 'debit') {
+                 currentBalance -= tx.amount;
+            }
         }
     });
 

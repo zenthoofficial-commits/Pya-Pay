@@ -35,6 +35,7 @@
         .leaflet-routing-container { display: none; }
         
         .tab-btn.active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
+        .noti-badge { background-color: #ef4444; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 9999px; font-weight: bold; margin-left: auto; }
     </style>
 </head>
 <body class="text-sm h-screen overflow-hidden flex flex-col">
@@ -66,10 +67,13 @@
             </div>
             <nav class="flex-1 overflow-y-auto py-4 space-y-1">
                 <a href="#dashboard-view" class="nav-link active flex items-center gap-3 px-6 py-3 text-slate-300">Dashboard</a>
-                <a href="#drivers-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300">Drivers List</a>
+                <a href="#drivers-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300">
+                    Drivers List
+                    <span id="drivers-badge" class="noti-badge hidden">0</span>
+                </a>
                 <a href="#trips-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300">Trips & Revenue</a>
                 <a href="#map-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300">Live Map & Tools</a>
-                <a href="#settings-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300">Settings</a>
+                <a href="#settings-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300">Settings & Prices</a>
             </nav>
             <div class="p-4 border-t border-slate-700 bg-slate-800">
                 <button id="logout-button" class="w-full px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition">Sign Out</button>
@@ -166,6 +170,16 @@
                                 <input id="platform-fee-input" type="number" min="0" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. 100">
                                 <p class="text-xs text-slate-500 mt-1">Fixed amount taken per trip.</p>
                             </div>
+                            <div class="border-t pt-4">
+                                <label class="block text-sm font-semibold text-slate-600 mb-1">Base Fare (Ks)</label>
+                                <input id="base-fare-input" type="number" min="0" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. 1500">
+                                <p class="text-xs text-slate-500 mt-1">Starting price for every trip.</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-600 mb-1">Price Per KM (Ks)</label>
+                                <input id="price-per-km-input" type="number" min="0" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. 500">
+                                <p class="text-xs text-slate-500 mt-1">Added cost for each kilometer.</p>
+                            </div>
                             <button type="submit" class="btn-primary w-full py-2 rounded-lg mt-4">Save Settings</button>
                         </form>
                     </div>
@@ -194,18 +208,19 @@
     <!-- Add Driver Modal -->
     <div id="add-driver-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg border border-slate-200 p-6">
-             <h3 class="text-xl font-bold text-slate-800 mb-4">Add Driver</h3>
+             <h3 class="text-xl font-bold text-slate-800 mb-4">Add Driver Account</h3>
+             <p class="text-xs text-amber-600 bg-amber-50 p-2 rounded mb-4">⚠️ Creating an account will log you out of the Admin panel. You will need to log back in as Admin.</p>
              <form id="add-driver-form" class="space-y-3">
                  <input name="name" placeholder="Name" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
                  <input name="nrc" placeholder="NRC (e.g., 12/OkTaNa(N)123456)" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
-                 <input name="email" placeholder="Email" type="email" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
+                 <input name="email" placeholder="Email (Login ID)" type="email" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
                  <input name="password" placeholder="Password" type="password" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
                  <input name="phone" placeholder="Phone" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
                  <input name="carModel" placeholder="Car Model" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
                  <input name="carPlate" placeholder="Car Plate" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
                  <div class="flex justify-end gap-2 mt-4">
                      <button type="button" onclick="closeModal('add-driver-modal')" class="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded">Cancel</button>
-                     <button type="submit" class="btn-primary px-4 py-2 rounded">Create Record</button>
+                     <button type="submit" class="btn-primary px-4 py-2 rounded">Create Account</button>
                  </div>
              </form>
         </div>
@@ -215,7 +230,7 @@
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getDatabase, ref, onValue, set, get, update, remove, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
         const firebaseConfig = { apiKey: "AIzaSyB7zSpZMYgS2SChtyFrUvvp0txPutecF3g", authDomain: "zenstride.firebaseapp.com", databaseURL: "https://zenstride-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "zenstride", storageBucket: "zenstride.appspot.com", messagingSenderId: "588697035765", appId: "1:588697035765:web:9411ea5aa9588ceb7d36bc" };
@@ -246,7 +261,8 @@
                     initData();
                     initMap();
                 } else {
-                    signOut(auth); alert('Not an admin');
+                    // Check if it's a freshly created driver (not admin) to avoid loop
+                    signOut(auth); 
                 }
             } else {
                 dom.loginScreen.classList.remove('hidden');
@@ -297,26 +313,43 @@
             });
              onValue(ref(db, 'completedTrips'), snap => {
                 let totalCommission = 0;
-                // Get dynamic rates from settings, or use defaults for display if not loaded yet (just estimation here)
-                // Ideally we should pull settings here too, but for total stat overview, aggregation is complex.
-                // We'll calculate based on the individual trip formula saved or re-calculate.
                 if(snap.exists()) {
                     Object.values(snap.val()).forEach(driverTrips => {
                         Object.values(driverTrips).forEach(t => {
-                             // Rough estimate using standard defaults if not stored on trip
-                             const comm = t.commissionAmount || (100 + Math.round((t.fare - 100) * 0.14)); 
+                             const comm = t.commissionAmount || 0; 
                              totalCommission += comm;
                         });
                     });
                 }
                 document.getElementById('stat-revenue').innerText = `${totalCommission.toLocaleString()} Ks`;
             });
+            
+            // Listen to all transactions to count pending requests for notification
+            onValue(ref(db, 'transactions'), snap => {
+                if(snap.exists()) {
+                    let pendingCount = 0;
+                    Object.values(snap.val()).forEach(driverTxs => {
+                        Object.values(driverTxs).forEach(tx => {
+                            if(tx.status === 'pending' && tx.type === 'topup') pendingCount++;
+                        });
+                    });
+                    const badge = document.getElementById('drivers-badge');
+                    if(pendingCount > 0) {
+                        badge.innerText = pendingCount;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+            });
 
             // Settings Load
             onValue(ref(db, 'settings/fees'), snap => {
-                const fees = snap.val() || { commissionRate: 14, platformFee: 100 };
+                const fees = snap.val() || { commissionRate: 14, platformFee: 100, baseFare: 1500, pricePerKm: 500 };
                 document.getElementById('commission-input').value = fees.commissionRate;
                 document.getElementById('platform-fee-input').value = fees.platformFee;
+                document.getElementById('base-fare-input').value = fees.baseFare || 1500;
+                document.getElementById('price-per-km-input').value = fees.pricePerKm || 500;
             });
         }
 
@@ -324,8 +357,11 @@
             e.preventDefault();
             const comm = parseInt(document.getElementById('commission-input').value);
             const fee = parseInt(document.getElementById('platform-fee-input').value);
-            await set(ref(db, 'settings/fees'), { commissionRate: comm, platformFee: fee });
-            alert('Settings Saved! All drivers will update instantly.');
+            const base = parseInt(document.getElementById('base-fare-input').value);
+            const perKm = parseInt(document.getElementById('price-per-km-input').value);
+            
+            await set(ref(db, 'settings/fees'), { commissionRate: comm, platformFee: fee, baseFare: base, pricePerKm: perKm });
+            alert('Settings & Prices Saved!');
         };
 
         function renderDrivers(drivers) {
@@ -428,7 +464,6 @@
                 if(historySnap.exists()) {
                     trips = Object.values(historySnap.val());
                     trips.forEach(t => {
-                        // Use stored commission amount if available, else calculate with current rate
                         const deduct = t.commissionAmount || (fees.platformFee + Math.round((t.fare - fees.platformFee) * (fees.commissionRate/100)));
                         totalDeductions += deduct;
                     });
@@ -440,17 +475,14 @@
                     const txData = transactionsSnap.val();
                     txList = Object.keys(txData).map(key => ({ id: key, ...txData[key] }));
                     txList.forEach(tx => {
-                        if(tx.type === 'topup' && tx.status === 'approved') totalTopups += tx.amount;
-                        if(tx.type === 'withdraw') totalTopups -= tx.amount;
+                        if(tx.status === 'approved') {
+                            if(tx.type === 'topup' || tx.type === 'credit') totalTopups += tx.amount;
+                            if(tx.type === 'withdraw' || tx.type === 'debit') totalTopups -= tx.amount;
+                        }
                     });
                 }
                 
-                txList.sort((a,b) => {
-                    if (a.status === 'pending' && b.status !== 'pending') return -1;
-                    if (a.status !== 'pending' && b.status === 'pending') return 1;
-                    return b.date - a.date;
-                });
-
+                txList.sort((a,b) => b.date - a.date);
                 const balance = totalTopups - totalDeductions;
 
                 container.innerHTML = `
@@ -459,28 +491,46 @@
                             <p class="text-xs text-blue-100 uppercase font-bold tracking-wide">Wallet Balance</p>
                             <h2 class="text-3xl font-extrabold">${balance.toLocaleString()} Ks</h2>
                         </div>
-                        <button onclick="processWithdraw('${currentDriverId}', ${balance})" class="bg-white/20 hover:bg-white/30 text-white border border-white/50 px-4 py-2 rounded-lg font-bold backdrop-blur-sm">Withdraw</button>
+                    </div>
+
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6">
+                        <h4 class="font-bold text-slate-700 text-xs uppercase mb-2">Manual Adjustment</h4>
+                        <div class="flex gap-2 mb-2">
+                             <select id="adj-type" class="bg-white border p-2 rounded text-xs"><option value="credit">Credit (+)</option><option value="debit">Debit (-)</option></select>
+                             <input id="adj-amount" type="number" placeholder="Amount" class="bg-white border p-2 rounded text-xs w-full">
+                        </div>
+                        <input id="adj-reason" type="text" placeholder="Reason (e.g., Bonus, Fine)" class="bg-white border p-2 rounded text-xs w-full mb-2">
+                        <button onclick="manualAdjust('${currentDriverId}')" class="w-full bg-slate-800 text-white text-xs font-bold py-2 rounded">Apply Adjustment</button>
                     </div>
                     
                     <h3 class="font-bold text-slate-800 mb-2 border-b pb-2">Transactions</h3>
                     <div class="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
                         ${txList.length ? txList.map(tx => {
                             const isPending = tx.status === 'pending';
+                            let typeLabel = 'Transaction';
+                            if(tx.type === 'topup') typeLabel = 'Top-up Request';
+                            if(tx.type === 'withdraw') typeLabel = 'Withdrawal';
+                            if(tx.type === 'credit') typeLabel = 'Manual Credit';
+                            if(tx.type === 'debit') typeLabel = 'Manual Debit';
+
                             return `
                             <div class="flex justify-between items-center p-3 ${isPending ? 'bg-yellow-50 border-yellow-200' : 'bg-slate-50 border-slate-100'} border rounded-lg">
                                 <div>
-                                    <p class="font-bold text-slate-700 ${isPending ? 'text-yellow-700' : ''}">${tx.type === 'topup' ? 'Top-up Request' : 'Withdrawal'}</p>
-                                    <p class="text-xs text-slate-400">${new Date(tx.date).toLocaleDateString()} ${isPending ? '<span class="font-bold text-yellow-600">• Pending</span>' : ''}</p>
+                                    <p class="font-bold text-slate-700 ${isPending ? 'text-yellow-700' : ''}">${typeLabel}</p>
+                                    <p class="text-xs text-slate-400">${new Date(tx.date).toLocaleDateString()}</p>
                                     ${isPending ? `<p class="text-xs text-slate-500 font-mono mt-1">${tx.method} • ID: ${tx.txId} • Sender: ${tx.senderName}</p>` : ''}
+                                    ${tx.reason ? `<p class="text-xs text-slate-500 italic">"${tx.reason}"</p>` : ''}
                                 </div>
                                 <div class="text-right">
-                                    <p class="font-bold text-slate-800">${tx.amount.toLocaleString()} Ks</p>
+                                    <p class="font-bold ${tx.type === 'withdraw' || tx.type === 'debit' ? 'text-red-500' : 'text-green-600'}">
+                                        ${tx.type === 'withdraw' || tx.type === 'debit' ? '-' : '+'}${tx.amount.toLocaleString()} Ks
+                                    </p>
                                     ${isPending ? `
                                         <div class="flex gap-2 mt-1">
                                             <button onclick="handleTx('${currentDriverId}', '${tx.id}', 'rejected')" class="text-xs text-red-500 hover:underline font-bold">Reject</button>
                                             <button onclick="handleTx('${currentDriverId}', '${tx.id}', 'approved')" class="text-xs text-green-600 hover:underline font-bold">Approve</button>
                                         </div>
-                                    ` : `<span class="text-xs text-green-600 font-bold capitalize">${tx.status || 'Completed'}</span>`}
+                                    ` : `<span class="text-xs text-slate-400 font-bold capitalize">${tx.status || 'Completed'}</span>`}
                                 </div>
                             </div>`;
                         }).join('') : '<p class="text-slate-400 text-sm text-center">No transactions.</p>'}
@@ -494,7 +544,6 @@
             if(!dateVal) return alert("Select a date");
             const ts = new Date(dateVal).getTime();
             await update(ref(db, `drivers/${uid}`), { bannedUntil: ts, isOnline: false });
-            // Also force logout logic happens on driver app side via listener
             const d = driversCache[uid];
             renderModalContent('info', d);
             alert("Driver Banned until " + dateVal);
@@ -526,22 +575,25 @@
             }
         };
 
-        window.processWithdraw = async (uid, max) => {
-            const amount = prompt(`Enter amount to withdraw (Max: ${max})`);
-            if(!amount) return;
-            const val = parseInt(amount);
-            if(isNaN(val) || val <= 0 || val > max) return alert('Invalid amount');
+        window.manualAdjust = async (uid) => {
+            const type = document.getElementById('adj-type').value;
+            const amount = parseInt(document.getElementById('adj-amount').value);
+            const reason = document.getElementById('adj-reason').value;
             
+            if(!amount || amount <= 0) return alert('Enter valid amount');
+            if(!reason) return alert('Enter reason');
+
             await push(ref(db, `transactions/${uid}`), {
-                amount: val,
+                amount: amount,
                 date: serverTimestamp(),
-                type: 'withdraw',
-                status: 'approved' // Immediate withdrawal by admin
+                type: type, // credit or debit
+                reason: reason,
+                status: 'approved'
             });
-            alert('Withdrawal Recorded.');
+            alert('Adjustment Applied');
             const d = driversCache[uid];
             renderModalContent('finance', d);
-        };
+        }
 
         // Map & Measure Code (Same as before)
         function initMap() {
@@ -592,6 +644,7 @@
                         const r = e.routes[0];
                         const dist = (r.summary.totalDistance / 1000).toFixed(1);
                         const time = Math.round(r.summary.totalTime / 60);
+                        // Using default static prices for quick measure tool, or could fetch from cache
                         const cost = Math.max(1500, Math.round((1500 + parseFloat(dist) * 500)/100)*100);
                         L.popup().setLatLng(measurePoints[1]).setContent(`<div class="font-bold text-center text-slate-800"><p class="text-lg text-blue-600">${dist} km</p><p>${time} mins</p><p class="text-slate-500 border-t border-slate-200 mt-1 pt-1">Est: ${cost} Ks</p></div>`).openOn(map);
                         measurePoints = []; dom.measureInfo.innerText = "Calculated. Click new points."; setTimeout(() => dom.measureInfo.innerText = "Click two points", 3000);
@@ -615,24 +668,24 @@
             const f = new FormData(e.target);
             const d = Object.fromEntries(f.entries());
              try {
-                // IMPORTANT: Client-side SDK limitation workaround
-                // Creating a user kicks out the current user (Admin).
-                // Solution: Create the Database Record here so the admin sees it, 
-                // but ask admin to create Auth manually in console for now, OR rely on a separate backend.
-                
-                // For this demo: Create DB entry to show in list, alert for Auth.
-                const mockUid = `driver_${Date.now()}`;
-                
-                await set(ref(db, `drivers/${mockUid}`), { 
+                // Create user using Firebase Auth
+                const userCredential = await createUserWithEmailAndPassword(auth, d.email, d.password);
+                const uid = userCredential.user.uid;
+
+                // Save driver details to Realtime Database
+                await set(ref(db, `drivers/${uid}`), { 
                     ...d, 
                     isOnline: false, 
                     createdAt: new Date().toISOString() 
                 });
                 
                 closeModal('add-driver-modal');
-                alert(`Driver Record Created!\n\nIMPORTANT: Since this is a client-side admin panel, please go to the Firebase Console > Authentication tab and create a user with email: ${d.email} and password: ${d.password}. Copy the UID and update the database if you want them to link perfectly, or just use this record for display purposes.`);
+                alert(`Driver Created Successfully!\n\nYou have been logged out because you created a new user session. Please log back in as Admin.`);
                 
-            } catch(err) { alert(err.message); }
+            } catch(err) { 
+                console.error(err);
+                alert("Error: " + err.message); 
+            }
         };
 
     </script>

@@ -182,23 +182,35 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ onClose, balance, tripHis
                     } else {
                         const tx = item.data;
                         const isTopup = tx.type === 'topup';
+                        const isWithdraw = tx.type === 'withdraw';
+                        const isCredit = tx.type === 'credit';
+                        const isDebit = tx.type === 'debit';
                         const isPending = tx.status === 'pending';
                         
-                        let amountColor = isPending ? 'text-yellow-600' : (isTopup ? 'text-green-600' : 'text-red-500');
-                        let sign = isTopup ? '+' : '-';
-                        let label = isTopup ? 'Top-up' : 'Withdraw';
+                        const isPositive = isTopup || isCredit;
+                        
+                        let amountColor = isPending ? 'text-yellow-600' : (isPositive ? 'text-green-600' : 'text-red-500');
+                        let sign = isPositive ? '+' : '-';
+                        
+                        let label = 'Transaction';
+                        if(isTopup) label = 'Top-up Request';
+                        if(isWithdraw) label = 'Withdrawal';
+                        if(isCredit) label = 'Manual Credit';
+                        if(isDebit) label = 'Manual Debit';
+                        
                         if (isPending) label += ' (Pending)';
 
                         return (
                             <div key={`tx-${index}`} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
                                 <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-full ${isPending ? 'bg-yellow-100' : (isTopup ? 'bg-green-100' : 'bg-red-100')}`}>
-                                        <WalletIcon className={`w-5 h-5 ${isPending ? 'text-yellow-600' : (isTopup ? 'text-green-600' : 'text-red-500')}`}/>
+                                    <div className={`p-2 rounded-full ${isPending ? 'bg-yellow-100' : (isPositive ? 'bg-green-100' : 'bg-red-100')}`}>
+                                        <WalletIcon className={`w-5 h-5 ${isPending ? 'text-yellow-600' : (isPositive ? 'text-green-600' : 'text-red-500')}`}/>
                                     </div>
                                     <div>
                                         <p className="font-semibold text-slate-700 text-sm">{label}</p>
                                         <p className="text-xs text-gray-500">{new Date(item.date).toLocaleDateString()}</p>
                                         {isPending && <p className="text-[10px] text-slate-400">{tx.method} • {tx.txId}</p>}
+                                        {tx.reason && <p className="text-[10px] text-slate-500 italic">"{tx.reason}"</p>}
                                     </div>
                                 </div>
                                 <p className={`font-bold ${amountColor}`}>{sign}{tx.amount.toLocaleString()} Ks</p>
