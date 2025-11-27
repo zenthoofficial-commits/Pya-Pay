@@ -1,6 +1,6 @@
 {
   "rules": {
-    ".read": "root.child('admins/' + auth.uid).exists()",
+    ".read": "auth != null",
     ".write": "root.child('admins/' + auth.uid).exists()",
     "admins": {
       "$uid": {
@@ -9,53 +9,48 @@
       }
     },
     "drivers": {
-      ".indexOn": ["email"],
+      ".read": "auth != null",
+      ".write": "root.child('admins/' + auth.uid).exists() || (auth != null && !data.exists())",
       "$driverId": {
-        ".read": "auth != null",
-        ".write": "auth != null && $driverId === auth.uid || root.child('admins/' + auth.uid).exists()"
+        ".write": "auth != null && ($driverId === auth.uid || root.child('admins/' + auth.uid).exists())"
       }
     },
     "driverLocations": {
-      ".indexOn": ["timestamp"],
       ".read": "auth != null",
       "$driverId": {
-        ".write": "auth != null && $driverId === auth.uid || root.child('admins/' + auth.uid).exists()"
+        ".write": "auth != null && ($driverId === auth.uid || root.child('admins/' + auth.uid).exists())"
+      }
+    },
+    "completedTrips": {
+      ".read": "auth != null",
+      "$driverId": {
+        ".read": "auth != null && ($driverId === auth.uid || root.child('admins/' + auth.uid).exists())",
+        ".write": "auth != null && ($driverId === auth.uid || root.child('admins/' + auth.uid).exists())"
+      }
+    },
+    "transactions": {
+      ".read": "auth != null",
+      ".write": "root.child('admins/' + auth.uid).exists()",
+      "$driverId": {
+        ".read": "auth != null && ($driverId === auth.uid || root.child('admins/' + auth.uid).exists())"
       }
     },
     "trips": {
       ".indexOn": ["status", "driverId", "passengerId", "createdAt"],
       ".read": "auth != null",
       "$tripId": {
-        ".read": "auth != null",
         ".write": "auth != null"
-      }
-    },
-    "completedTrips": {
-      ".read": "auth != null",
-      "$driverId": {
-        ".read": "auth != null && $driverId === auth.uid || root.child('admins/' + auth.uid).exists()",
-        ".write": "auth != null && $driverId === auth.uid || root.child('admins/' + auth.uid).exists()"
       }
     },
     "passengers": {
       "$passengerId": {
         ".read": "auth != null",
-        ".write": "auth != null"
+        ".write": "auth != null && ($passengerId === auth.uid || root.child('admins/' + auth.uid).exists())"
       }
     },
     "chats": {
-      "$tripId": {
-        ".read": "auth != null",
-        ".write": "auth != null",
-        "messages": {
-          ".indexOn": "timestamp"
-        }
-      }
-    },
-    "transactions": {
-      ".indexOn": ["driverId", "timestamp"],
       ".read": "auth != null",
-      ".write": "root.child('admins/' + auth.uid).exists()"
+      ".write": "auth != null"
     }
   }
 }
