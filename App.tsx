@@ -77,15 +77,9 @@ const QuickReplyPopup: React.FC<{onSend: (msg: string) => void, onOpenChat: () =
     )
 }
 
-/**
- * Calculates the distance between two points on Earth using the Haversine formula.
- * @param p1 - The first point with latitude and longitude.
- * @param p2 - The second point with latitude and longitude.
- * @returns The distance in meters.
- */
 const getHaversineDistance = (p1: LatLngLiteral, p2: LatLngLiteral): number => {
     const R = 6371e3; // Earth's radius in metres
-    const φ1 = p1.lat * Math.PI/180; // φ, λ in radians
+    const φ1 = p1.lat * Math.PI/180;
     const φ2 = p2.lat * Math.PI/180;
     const Δφ = (p2.lat-p1.lat) * Math.PI/180;
     const Δλ = (p2.lng-p1.lng) * Math.PI/180;
@@ -116,6 +110,9 @@ const App: React.FC = () => {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [balance, setBalance] = useState(0);
 
+  // Dynamic Fees
+  const [fees, setFees] = useState({ commissionRate: 14, platformFee: 100 });
+
   const [onTripUIVisible, setOnTripUIVisible] = useState(true);
   const [viewingTripSummary, setViewingTripSummary] = useState<Trip | null>(null);
 
@@ -139,11 +136,9 @@ const App: React.FC = () => {
     const dataListeners: (() => void)[] = [];
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-        // Clean up old listeners when user changes
         dataListeners.forEach(l => l());
         dataListeners.length = 0;
 
-        // Reset state for new user/logout
         setUser(currentUser);
         setDriverId(null);
         setIsOnline(false);
@@ -159,37 +154,46 @@ const App: React.FC = () => {
             setDriverId(currentDriverId);
 
             try {
-                // Ensure driver profile exists
+                // Fetch Settings first
+                const settingsRef = ref(db, 'settings/fees');
+                const settingsListener = onValue(settingsRef, (snap) => {
+                    if(snap.exists()) setFees(snap.val());
+                });
+                dataListeners.push(() => off(settingsRef, 'value', settingsListener));
+
                 const driverProfileRef = ref(db, `drivers/${currentDriverId}`);
                 const profileSnap = await get(driverProfileRef);
                 if (!profileSnap.exists()) {
-                     // Check if admin deleted the driver while they were logged in or if it's a new setup
-                     // For safety, force logout if profile doesn't exist (means they were banned/removed)
                      console.error("Driver profile not found. Logging out.");
                      await auth.signOut();
                      return;
                 }
 
-                // 1. Listen for Profile changes (isOnline and Existence)
+                // 1. Listen for Profile (Bans & Online Status)
                 const driverRef = ref(db, `drivers/${currentDriverId}`);
                 const profileListener = onValue(driverRef, (snapshot) => {
                     if (snapshot.exists()) {
-                        setIsOnline(snapshot.val().isOnline || false);
+                        const data = snapshot.val();
+                        // BAN CHECK
+                        if (data.bannedUntil && data.bannedUntil > Date.now()) {
+                            alert(`Your account has been suspended until ${new Date(data.bannedUntil).toLocaleDateString()}.`);
+                            auth.signOut();
+                            return;
+                        }
+                        setIsOnline(data.isOnline || false);
                     } else {
-                        // Driver was deleted from DB while logged in
                         auth.signOut();
                     }
                 });
                 dataListeners.push(() => off(driverRef, 'value', profileListener));
 
-                // 2. Listen for Completed Trips (tripHistory) & Auto Delete Old Trips
+                // 2. Listen for Completed Trips (tripHistory) & Auto Delete
                 const completedTripsRef = ref(db, `completedTrips/${currentDriverId}`);
                 const historyListener = onValue(completedTripsRef, (snapshot) => {
                     if (snapshot.exists()) {
                         const tripsData = snapshot.val();
                         const tripsArray = Object.values(tripsData) as Trip[];
                         
-                        // AUTO DELETE LOGIC: Remove trips older than 2 days
                         const twoDaysAgo = Date.now() - (2 * 24 * 60 * 60 * 1000);
                         tripsArray.forEach(trip => {
                              if (trip.completedAt && trip.completedAt < twoDaysAgo) {
@@ -204,7 +208,7 @@ const App: React.FC = () => {
                 });
                 dataListeners.push(() => off(completedTripsRef, 'value', historyListener));
 
-                // 3. Listen for Transactions (Top-ups)
+                // 3. Listen for Transactions
                 const transactionsRef = ref(db, `transactions/${currentDriverId}`);
                 const txListener = onValue(transactionsRef, (snapshot) => {
                     if (snapshot.exists()) {
@@ -249,7 +253,6 @@ const App: React.FC = () => {
                 setIsAuthenticating(false);
             }
         } else {
-            // Logged out
             setIsDataLoaded(true);
             setIsAuthenticating(false);
         }
@@ -262,14 +265,8 @@ const App: React.FC = () => {
 }, []);
 
   useEffect(() => {
-    // Calculate Balance: 
-    // (+) Approved Topups
-    // (-) Trip Deductions (Platform Fee + Commission)
-    // (-) Withdrawals (if any, though prompt implies top-up based balance mainly)
-    
     let currentBalance = 0;
 
-    // Add Approved Topups
     transactions.forEach(tx => {
         if (tx.type === 'topup' && tx.status === 'approved') {
             currentBalance += tx.amount;
@@ -278,19 +275,28 @@ const App: React.FC = () => {
         }
     });
 
-    // Subtract Trip Deductions
     tripHistory.forEach(trip => {
-        // Deduction = Platform Fee (100) + 14% of (Fare - 100)
-        const deduction = 100 + Math.round((trip.fare - 100) * 0.14);
+        // Calculate based on dynamic rates, but preferably utilize stored values on trip if available
+        // For new trips, we store the commissionAmount. For legacy, we compute.
+        // Formula: platformFee + ((fare - platformFee) * rate/100)
+        
+        let deduction = 0;
+        // @ts-ignore - Check if trip has stored commission data
+        if (trip.commissionAmount) {
+             // @ts-ignore
+            deduction = trip.commissionAmount;
+        } else {
+            // Fallback to current settings if not stored
+            deduction = fees.platformFee + Math.round((trip.fare - fees.platformFee) * (fees.commissionRate / 100));
+        }
         currentBalance -= deduction;
     });
 
     setBalance(currentBalance);
-  }, [tripHistory, transactions]);
+  }, [tripHistory, transactions, fees]);
 
 
   useEffect(() => {
-    // A clear "Ting" sound for notifications
     tripRequestAudioRef.current = new Audio("data:audio/wav;base64,UklGRlFFT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YUFENQDI7PAA8gDwAPUA9ADzAPIBAAIEAwQDBAIBAAAAAP8A/gD4APUA8gDxAPIA8gDzAO8A7ADoAN4A2gDYANoA3gDkAO0A9AEAAv9//wD+APwA+gD7AP0AAQIDBAUGBwgJCgsMDQ4PDxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==");
   }, []);
 
@@ -455,7 +461,16 @@ const App: React.FC = () => {
 
   const handleCompleteTrip = async () => {
     if (activeTrip && driverId) {
-        const completedTrip = { ...activeTrip, completedAt: Date.now() };
+        // Calculate commission to snapshot it
+        const commissionAmount = fees.platformFee + Math.round((activeTrip.fare - fees.platformFee) * (fees.commissionRate / 100));
+
+        const completedTrip = { 
+            ...activeTrip, 
+            completedAt: Date.now(),
+            commissionAmount: commissionAmount,
+            appliedRate: fees.commissionRate,
+            appliedPlatformFee: fees.platformFee
+        };
         
         const completedTripRef = ref(db, `completedTrips/${driverId}/${activeTrip.id}`);
         await set(completedTripRef, completedTrip);
@@ -554,8 +569,29 @@ const App: React.FC = () => {
           onGoOffline={handleGoOffline}
         />
       }
-      {showEarnings && driverId && <EarningsModal driverId={driverId} onClose={() => setShowEarnings(false)} balance={balance} tripHistory={tripHistory} transactions={transactions} onViewTripDetails={handleViewTripDetails} />}
-      {viewingTripSummary && <TripSummaryModal trip={viewingTripSummary} onClose={handleCloseTripSummary} />}
+      {showEarnings && driverId && 
+        <EarningsModal 
+            driverId={driverId} 
+            onClose={() => setShowEarnings(false)} 
+            balance={balance} 
+            tripHistory={tripHistory} 
+            transactions={transactions} 
+            onViewTripDetails={handleViewTripDetails} 
+            commissionRate={fees.commissionRate}
+            platformFee={fees.platformFee}
+        />
+      }
+      {viewingTripSummary && 
+        <TripSummaryModal 
+            trip={viewingTripSummary} 
+            onClose={handleCloseTripSummary} 
+            // Use snapshot values if available, else current settings
+            // @ts-ignore
+            commissionRate={viewingTripSummary.appliedRate ?? fees.commissionRate}
+            // @ts-ignore
+            platformFee={viewingTripSummary.appliedPlatformFee ?? fees.platformFee}
+        />
+      }
       {isChatOpen && activeTrip && <ChatModal tripId={activeTrip.id} onClose={() => setIsChatOpen(false)} />}
       {cancellationAlert.show && <CancellationAlertModal fee={cancellationAlert.fee} onClose={handleCloseCancellationAlert} />}
       {showSOSConfirm && <ConfirmModal title="Emergency Alert" message="Are you sure you want to trigger the emergency alert? This will contact our safety team." onConfirm={handleSOSConfirm} onCancel={() => setShowSOSConfirm(false)} />}

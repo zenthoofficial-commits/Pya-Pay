@@ -13,6 +13,8 @@ interface EarningsModalProps {
   transactions: any[];
   onViewTripDetails: (trip: Trip) => void;
   driverId: string;
+  commissionRate: number;
+  platformFee: number;
 }
 
 const ADMIN_PAYMENT_INFO = {
@@ -20,7 +22,7 @@ const ADMIN_PAYMENT_INFO = {
     WavePay: "09987654321 (Pyapay Admin)"
 };
 
-const EarningsModal: React.FC<EarningsModalProps> = ({ onClose, balance, tripHistory, transactions, onViewTripDetails, driverId }) => {
+const EarningsModal: React.FC<EarningsModalProps> = ({ onClose, balance, tripHistory, transactions, onViewTripDetails, driverId, commissionRate, platformFee }) => {
   const [showTopupForm, setShowTopupForm] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
   
@@ -153,7 +155,15 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ onClose, balance, tripHis
                 historyItems.map((item, index) => {
                     if (item.type === 'trip') {
                         const trip = item.data as Trip;
-                        const deduction = 100 + Math.round((trip.fare - 100) * 0.14);
+                        // Use stored values if available (from legacy handling) or current props
+                        // @ts-ignore
+                        const appliedRate = trip.appliedRate ?? commissionRate;
+                         // @ts-ignore
+                        const appliedFee = trip.appliedPlatformFee ?? platformFee;
+
+                        // @ts-ignore
+                        const deduction = trip.commissionAmount || (appliedFee + Math.round((trip.fare - appliedFee) * (appliedRate / 100)));
+
                         return (
                             <div key={`trip-${trip.id}`} onClick={() => onViewTripDetails(trip)} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100 hover:bg-gray-100 cursor-pointer transition-colors">
                                 <div className="flex items-center gap-3">

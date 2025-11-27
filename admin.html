@@ -69,6 +69,7 @@
                 <a href="#drivers-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300">Drivers List</a>
                 <a href="#trips-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300">Trips & Revenue</a>
                 <a href="#map-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300">Live Map & Tools</a>
+                <a href="#settings-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300">Settings</a>
             </nav>
             <div class="p-4 border-t border-slate-700 bg-slate-800">
                 <button id="logout-button" class="w-full px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition">Sign Out</button>
@@ -114,7 +115,7 @@
                     </div>
                     <div class="card rounded-xl overflow-hidden shadow-sm">
                         <table class="w-full text-left">
-                            <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-bold border-b border-slate-200"><tr><th class="p-4">Name</th><th class="p-4">Phone</th><th class="p-4">Car</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th></tr></thead>
+                            <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-bold border-b border-slate-200"><tr><th class="p-4">Name</th><th class="p-4">NRC</th><th class="p-4">Car</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th></tr></thead>
                             <tbody id="drivers-table" class="divide-y divide-slate-100 text-sm"></tbody>
                         </table>
                     </div>
@@ -149,6 +150,26 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Settings View -->
+                <div id="settings-view" class="view-content hidden space-y-6">
+                    <div class="card p-6 rounded-xl shadow-sm border border-slate-200 max-w-lg">
+                        <h3 class="text-xl font-bold text-slate-800 mb-4">Pricing Configuration</h3>
+                        <form id="settings-form" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-600 mb-1">Commission Rate (%)</label>
+                                <input id="commission-input" type="number" min="0" max="100" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. 14">
+                                <p class="text-xs text-slate-500 mt-1">Percentage taken from the fare.</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-600 mb-1">Platform Fee (Ks)</label>
+                                <input id="platform-fee-input" type="number" min="0" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. 100">
+                                <p class="text-xs text-slate-500 mt-1">Fixed amount taken per trip.</p>
+                            </div>
+                            <button type="submit" class="btn-primary w-full py-2 rounded-lg mt-4">Save Settings</button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -176,6 +197,7 @@
              <h3 class="text-xl font-bold text-slate-800 mb-4">Add Driver</h3>
              <form id="add-driver-form" class="space-y-3">
                  <input name="name" placeholder="Name" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
+                 <input name="nrc" placeholder="NRC (e.g., 12/OkTaNa(N)123456)" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
                  <input name="email" placeholder="Email" type="email" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
                  <input name="password" placeholder="Password" type="password" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
                  <input name="phone" placeholder="Phone" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
@@ -183,7 +205,7 @@
                  <input name="carPlate" placeholder="Car Plate" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
                  <div class="flex justify-end gap-2 mt-4">
                      <button type="button" onclick="closeModal('add-driver-modal')" class="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded">Cancel</button>
-                     <button type="submit" class="btn-primary px-4 py-2 rounded">Create</button>
+                     <button type="submit" class="btn-primary px-4 py-2 rounded">Create Record</button>
                  </div>
              </form>
         </div>
@@ -193,7 +215,7 @@
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getDatabase, ref, onValue, set, get, update, remove, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
         const firebaseConfig = { apiKey: "AIzaSyB7zSpZMYgS2SChtyFrUvvp0txPutecF3g", authDomain: "zenstride.firebaseapp.com", databaseURL: "https://zenstride-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "zenstride", storageBucket: "zenstride.appspot.com", messagingSenderId: "588697035765", appId: "1:588697035765:web:9411ea5aa9588ceb7d36bc" };
@@ -275,29 +297,53 @@
             });
              onValue(ref(db, 'completedTrips'), snap => {
                 let totalCommission = 0;
+                // Get dynamic rates from settings, or use defaults for display if not loaded yet (just estimation here)
+                // Ideally we should pull settings here too, but for total stat overview, aggregation is complex.
+                // We'll calculate based on the individual trip formula saved or re-calculate.
                 if(snap.exists()) {
                     Object.values(snap.val()).forEach(driverTrips => {
                         Object.values(driverTrips).forEach(t => {
-                             // Revenue for platform = 100 + 14%
-                             const platformRev = 100 + Math.round((t.fare - 100) * 0.14);
-                             totalCommission += platformRev;
+                             // Rough estimate using standard defaults if not stored on trip
+                             const comm = t.commissionAmount || (100 + Math.round((t.fare - 100) * 0.14)); 
+                             totalCommission += comm;
                         });
                     });
                 }
                 document.getElementById('stat-revenue').innerText = `${totalCommission.toLocaleString()} Ks`;
             });
+
+            // Settings Load
+            onValue(ref(db, 'settings/fees'), snap => {
+                const fees = snap.val() || { commissionRate: 14, platformFee: 100 };
+                document.getElementById('commission-input').value = fees.commissionRate;
+                document.getElementById('platform-fee-input').value = fees.platformFee;
+            });
         }
+
+        document.getElementById('settings-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const comm = parseInt(document.getElementById('commission-input').value);
+            const fee = parseInt(document.getElementById('platform-fee-input').value);
+            await set(ref(db, 'settings/fees'), { commissionRate: comm, platformFee: fee });
+            alert('Settings Saved! All drivers will update instantly.');
+        };
 
         function renderDrivers(drivers) {
             const tbody = document.getElementById('drivers-table'); tbody.innerHTML = '';
             Object.entries(drivers).forEach(([uid, d]) => {
+                const isBanned = d.bannedUntil && d.bannedUntil > Date.now();
                 const tr = document.createElement('tr');
-                tr.className = 'border-b border-slate-100 hover:bg-slate-50';
+                tr.className = `border-b border-slate-100 hover:bg-slate-50 ${isBanned ? 'bg-red-50' : ''}`;
                 tr.innerHTML = `
                     <td class="p-4 font-bold text-slate-800">${d.name}</td>
-                    <td class="p-4 text-slate-500">${d.phone}</td>
+                    <td class="p-4 text-slate-500 font-mono text-xs">${d.nrc || 'N/A'}</td>
                     <td class="p-4 text-slate-500">${d.carModel} <span class="text-blue-600 font-mono text-xs">${d.carPlate}</span></td>
-                    <td class="p-4">${d.isOnline ? '<span class="text-emerald-600 bg-emerald-100 px-2 py-1 rounded text-xs">Online</span>' : '<span class="text-slate-500 bg-slate-100 px-2 py-1 rounded text-xs">Offline</span>'}</td>
+                    <td class="p-4">
+                        ${isBanned 
+                            ? '<span class="text-red-600 bg-red-100 px-2 py-1 rounded text-xs font-bold">BANNED</span>' 
+                            : (d.isOnline ? '<span class="text-emerald-600 bg-emerald-100 px-2 py-1 rounded text-xs">Online</span>' : '<span class="text-slate-500 bg-slate-100 px-2 py-1 rounded text-xs">Offline</span>')
+                        }
+                    </td>
                     <td class="p-4 text-right"><button class="text-blue-600 hover:underline font-semibold" onclick="openDriverDetails('${uid}')">Manage</button></td>
                 `;
                 tbody.appendChild(tr);
@@ -339,6 +385,9 @@
         async function renderModalContent(tab, driver) {
             const container = document.getElementById('modal-body');
             if(tab === 'info') {
+                const isBanned = driver.bannedUntil && driver.bannedUntil > Date.now();
+                const banDateStr = isBanned ? new Date(driver.bannedUntil).toLocaleDateString() : '';
+                
                 container.innerHTML = `
                     <div class="space-y-4 text-slate-800">
                         <div class="flex items-center gap-4">
@@ -347,23 +396,40 @@
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div class="bg-slate-50 p-3 rounded border border-slate-200"><p class="text-xs text-slate-400 uppercase font-bold">Phone</p><p class="font-medium">${driver.phone}</p></div>
-                            <div class="bg-slate-50 p-3 rounded border border-slate-200"><p class="text-xs text-slate-400 uppercase font-bold">Car</p><p class="font-medium">${driver.carModel} (${driver.carPlate})</p></div>
+                            <div class="bg-slate-50 p-3 rounded border border-slate-200"><p class="text-xs text-slate-400 uppercase font-bold">NRC</p><p class="font-medium">${driver.nrc || 'N/A'}</p></div>
+                            <div class="bg-slate-50 p-3 rounded border border-slate-200 col-span-2"><p class="text-xs text-slate-400 uppercase font-bold">Car</p><p class="font-medium">${driver.carModel} (${driver.carPlate})</p></div>
                         </div>
-                        <button onclick="removeDriver('${currentDriverId}')" class="w-full mt-6 bg-red-50 text-red-600 border border-red-200 py-3 rounded-lg font-bold hover:bg-red-100 transition">PERMANENTLY REMOVE DRIVER</button>
+
+                        <div class="bg-red-50 p-4 rounded-xl border border-red-200 mt-4">
+                            <h4 class="font-bold text-red-700 mb-2">Ban Management</h4>
+                            ${isBanned ? `<p class="text-red-600 font-bold mb-2">⛔ Banned until: ${banDateStr}</p><button onclick="unbanDriver('${currentDriverId}')" class="bg-white text-red-600 border border-red-300 px-3 py-1 rounded text-xs font-bold hover:bg-red-50">Unban Now</button>` : ''}
+                            <div class="mt-3">
+                                <label class="text-xs text-red-600 font-bold">Ban Until:</label>
+                                <div class="flex gap-2 mt-1">
+                                    <input type="date" id="ban-date" class="border border-red-300 rounded p-2 text-sm">
+                                    <button onclick="banDriver('${currentDriverId}')" class="bg-red-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-red-700">Set Ban</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onclick="removeDriver('${currentDriverId}')" class="w-full mt-6 bg-slate-100 text-slate-600 border border-slate-200 py-3 rounded-lg font-bold hover:bg-slate-200 transition">PERMANENTLY DELETE RECORD</button>
                     </div>
                 `;
             } else {
-                container.innerHTML = '<p class="text-slate-400 text-center">Loading Finance Data...</p>';
+                // ... Finance Code ...
+                 container.innerHTML = '<p class="text-slate-400 text-center">Loading Finance Data...</p>';
                 const historySnap = await get(ref(db, `completedTrips/${currentDriverId}`));
                 const transactionsSnap = await get(ref(db, `transactions/${currentDriverId}`));
+                const settingsSnap = await get(ref(db, 'settings/fees'));
+                const fees = settingsSnap.val() || { commissionRate: 14, platformFee: 100 };
                 
                 let trips = [];
-                let totalDeductions = 0; // Commission + Platform Fee
+                let totalDeductions = 0; 
                 if(historySnap.exists()) {
                     trips = Object.values(historySnap.val());
                     trips.forEach(t => {
-                        // Deduction = 100 + 14%
-                        const deduct = 100 + Math.round((t.fare - 100) * 0.14);
+                        // Use stored commission amount if available, else calculate with current rate
+                        const deduct = t.commissionAmount || (fees.platformFee + Math.round((t.fare - fees.platformFee) * (fees.commissionRate/100)));
                         totalDeductions += deduct;
                     });
                 }
@@ -375,11 +441,10 @@
                     txList = Object.keys(txData).map(key => ({ id: key, ...txData[key] }));
                     txList.forEach(tx => {
                         if(tx.type === 'topup' && tx.status === 'approved') totalTopups += tx.amount;
-                        if(tx.type === 'withdraw') totalTopups -= tx.amount; // Treat withdraw as negative topup for logic
+                        if(tx.type === 'withdraw') totalTopups -= tx.amount;
                     });
                 }
                 
-                // Sort Pending Requests First
                 txList.sort((a,b) => {
                     if (a.status === 'pending' && b.status !== 'pending') return -1;
                     if (a.status !== 'pending' && b.status === 'pending') return 1;
@@ -424,6 +489,23 @@
             }
         }
 
+        window.banDriver = async (uid) => {
+            const dateVal = document.getElementById('ban-date').value;
+            if(!dateVal) return alert("Select a date");
+            const ts = new Date(dateVal).getTime();
+            await update(ref(db, `drivers/${uid}`), { bannedUntil: ts, isOnline: false });
+            // Also force logout logic happens on driver app side via listener
+            const d = driversCache[uid];
+            renderModalContent('info', d);
+            alert("Driver Banned until " + dateVal);
+        };
+
+        window.unbanDriver = async (uid) => {
+            await update(ref(db, `drivers/${uid}`), { bannedUntil: null });
+            const d = driversCache[uid];
+            renderModalContent('info', d);
+        };
+
         window.handleTx = async (driverId, txId, status) => {
              if(status === 'rejected') {
                  if(!confirm('Reject this request?')) return;
@@ -461,13 +543,12 @@
             renderModalContent('finance', d);
         };
 
-        // Map
+        // Map & Measure Code (Same as before)
         function initMap() {
             if(map) return;
             map = L.map('admin-map', { zoomControl: false }).setView([16.8409, 96.1735], 13);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(map);
 
-            // Admin Location
             if(navigator.geolocation) {
                 navigator.geolocation.watchPosition(pos => {
                     const latlng = [pos.coords.latitude, pos.coords.longitude];
@@ -480,45 +561,29 @@
                 });
             }
 
-            document.getElementById('recenter-btn').onclick = () => {
-                if(adminMarker) map.setView(adminMarker.getLatLng(), 15);
-            };
+            document.getElementById('recenter-btn').onclick = () => { if(adminMarker) map.setView(adminMarker.getLatLng(), 15); };
 
-            // Measurement Tool
             document.getElementById('measure-tool-btn').onclick = () => {
                 isMeasuring = !isMeasuring;
                 const btn = document.getElementById('measure-tool-btn');
                 if(isMeasuring) {
-                    btn.classList.add('bg-blue-600', 'text-white', 'border-transparent');
-                    btn.classList.remove('bg-white', 'text-slate-700');
-                    dom.measureInfo.classList.remove('hidden');
-                    map.getContainer().style.cursor = 'crosshair';
+                    btn.classList.add('bg-blue-600', 'text-white', 'border-transparent'); btn.classList.remove('bg-white', 'text-slate-700'); dom.measureInfo.classList.remove('hidden'); map.getContainer().style.cursor = 'crosshair';
                 } else {
-                    btn.classList.remove('bg-blue-600', 'text-white', 'border-transparent');
-                    btn.classList.add('bg-white', 'text-slate-700');
-                    dom.measureInfo.classList.add('hidden');
-                    map.getContainer().style.cursor = '';
-                    if(measureControl) { map.removeControl(measureControl); measureControl = null; }
-                    measurePoints = [];
+                    btn.classList.remove('bg-blue-600', 'text-white', 'border-transparent'); btn.classList.add('bg-white', 'text-slate-700'); dom.measureInfo.classList.add('hidden'); map.getContainer().style.cursor = '';
+                    if(measureControl) { map.removeControl(measureControl); measureControl = null; } measurePoints = [];
                 }
             };
 
             map.on('click', (e) => {
                 if(!isMeasuring) return;
                 measurePoints.push(e.latlng);
-                
                 L.circleMarker(e.latlng, {radius: 5, color: '#3b82f6'}).addTo(map);
 
                 if(measurePoints.length === 2) {
                     if(measureControl) map.removeControl(measureControl);
-                    
                     measureControl = L.Routing.control({
                         waypoints: measurePoints,
-                        createMarker: function(i, wp) {
-                            return L.marker(wp.latLng, {
-                                icon: L.divIcon({ className: 'bg-blue-500 w-3 h-3 rounded-full border-2 border-white' })
-                            });
-                        },
+                        createMarker: function(i, wp) { return L.marker(wp.latLng, { icon: L.divIcon({ className: 'bg-blue-500 w-3 h-3 rounded-full border-2 border-white' }) }); },
                         lineOptions: { styles: [{color: '#3b82f6', opacity: 0.8, weight: 6}] },
                         addWaypoints: false, draggableWaypoints: false, fitSelectedRoutes: true, show: false
                     }).addTo(map);
@@ -528,15 +593,8 @@
                         const dist = (r.summary.totalDistance / 1000).toFixed(1);
                         const time = Math.round(r.summary.totalTime / 60);
                         const cost = Math.max(1500, Math.round((1500 + parseFloat(dist) * 500)/100)*100);
-                        
-                        L.popup()
-                            .setLatLng(measurePoints[1])
-                            .setContent(`<div class="font-bold text-center text-slate-800"><p class="text-lg text-blue-600">${dist} km</p><p>${time} mins</p><p class="text-slate-500 border-t border-slate-200 mt-1 pt-1">Est: ${cost} Ks</p></div>`)
-                            .openOn(map);
-                        
-                        measurePoints = []; // Reset for next measurement
-                        dom.measureInfo.innerText = "Route calculated. Click to start new.";
-                        setTimeout(() => dom.measureInfo.innerText = "Click two points on map", 3000);
+                        L.popup().setLatLng(measurePoints[1]).setContent(`<div class="font-bold text-center text-slate-800"><p class="text-lg text-blue-600">${dist} km</p><p>${time} mins</p><p class="text-slate-500 border-t border-slate-200 mt-1 pt-1">Est: ${cost} Ks</p></div>`).openOn(map);
+                        measurePoints = []; dom.measureInfo.innerText = "Calculated. Click new points."; setTimeout(() => dom.measureInfo.innerText = "Click two points", 3000);
                     });
                 }
             });
@@ -557,12 +615,23 @@
             const f = new FormData(e.target);
             const d = Object.fromEntries(f.entries());
              try {
-                // In a real app, use Admin SDK. Here we can't create users easily from client without logging out.
-                // Just alerting for this demo environment.
-                alert("To add a driver in this demo environment, please use the Firebase Console Authentication tab manually, then add the database entry here.");
-                // We will still add DB entry to simulate
-                // await set(ref(db, `drivers/simulated_${Date.now()}`), { ...d, isOnline: false, createdAt: new Date().toISOString() });
+                // IMPORTANT: Client-side SDK limitation workaround
+                // Creating a user kicks out the current user (Admin).
+                // Solution: Create the Database Record here so the admin sees it, 
+                // but ask admin to create Auth manually in console for now, OR rely on a separate backend.
+                
+                // For this demo: Create DB entry to show in list, alert for Auth.
+                const mockUid = `driver_${Date.now()}`;
+                
+                await set(ref(db, `drivers/${mockUid}`), { 
+                    ...d, 
+                    isOnline: false, 
+                    createdAt: new Date().toISOString() 
+                });
+                
                 closeModal('add-driver-modal');
+                alert(`Driver Record Created!\n\nIMPORTANT: Since this is a client-side admin panel, please go to the Firebase Console > Authentication tab and create a user with email: ${d.email} and password: ${d.password}. Copy the UID and update the database if you want them to link perfectly, or just use this record for display purposes.`);
+                
             } catch(err) { alert(err.message); }
         };
 

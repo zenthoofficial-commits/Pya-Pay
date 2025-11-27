@@ -8,6 +8,10 @@
         ".write": "auth != null && auth.uid === $uid"
       }
     },
+    "settings": {
+      ".read": "auth != null",
+      ".write": "root.child('admins/' + auth.uid).exists()"
+    },
     "drivers": {
       ".read": "auth != null",
       ".write": "root.child('admins/' + auth.uid).exists() || (auth != null && !data.exists())",

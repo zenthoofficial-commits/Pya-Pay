@@ -5,6 +5,8 @@ import { Trip } from '../types';
 interface TripSummaryModalProps {
   trip: Trip;
   onClose: () => void;
+  commissionRate: number;
+  platformFee: number;
 }
 
 const FareRow: React.FC<{ label: string; amount: number; isSub?: boolean; isTotal?: boolean; isDeduction?: boolean }> = ({ label, amount, isSub = false, isTotal = false, isDeduction = false }) => (
@@ -14,13 +16,13 @@ const FareRow: React.FC<{ label: string; amount: number; isSub?: boolean; isTota
     </div>
 );
 
-const TripSummaryModal: React.FC<TripSummaryModalProps> = ({ trip, onClose }) => {
-    // Calculations based on user request
+const TripSummaryModal: React.FC<TripSummaryModalProps> = ({ trip, onClose, commissionRate, platformFee }) => {
+    // Calculations based on dynamic settings passed via props
     const totalFare = trip.fare;
-    const platformFee = 100;
-    const commission = Math.round((totalFare - 100) * 0.14);
+    
+    // Formula: Platform Fee + (Fare - Platform Fee) * Rate%
+    const commission = Math.round((totalFare - platformFee) * (commissionRate / 100));
     const totalDeduction = platformFee + commission;
-    const driverNet = totalFare - totalDeduction;
 
     return (
         <div className="absolute inset-0 bg-black/60 z-30 flex justify-center items-center p-4 backdrop-blur-sm animate-fade-in">
@@ -53,7 +55,7 @@ const TripSummaryModal: React.FC<TripSummaryModalProps> = ({ trip, onClose }) =>
                     </div>
 
                     <FareRow label="Platform Fee" amount={-platformFee} isSub isDeduction />
-                    <FareRow label="Commission (14%)" amount={-commission} isSub isDeduction />
+                    <FareRow label={`Commission (${commissionRate}%)`} amount={-commission} isSub isDeduction />
 
                     <div className="mt-4 pt-2 border-t border-gray-200">
                          <div className="flex justify-between items-center">
