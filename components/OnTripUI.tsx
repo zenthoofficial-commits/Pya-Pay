@@ -16,9 +16,10 @@ interface OnTripUIProps {
   isVisible: boolean;
   onToggleVisibility: () => void;
   isLoading?: boolean;
+  unreadCount?: number;
 }
 
-const OnTripUI: React.FC<OnTripUIProps> = ({ trip, tripStage, onArrivedAtPickup, onStartTrip, onCompleteTrip, onOpenChat, lastSentMessage, isVisible, onToggleVisibility, isLoading = false }) => {
+const OnTripUI: React.FC<OnTripUIProps> = ({ trip, tripStage, onArrivedAtPickup, onStartTrip, onCompleteTrip, onOpenChat, lastSentMessage, isVisible, onToggleVisibility, isLoading = false, unreadCount = 0 }) => {
   
   const getStageDetails = () => {
     switch(tripStage) {
@@ -79,7 +80,7 @@ const OnTripUI: React.FC<OnTripUIProps> = ({ trip, tripStage, onArrivedAtPickup,
             <div className="flex items-center gap-2">
                 <h2 className="text-xl font-bold text-slate-800">{title}</h2>
                 <span className="bg-blue-50 text-blue-600 text-xs font-bold px-2 py-0.5 rounded border border-blue-100">
-                    Token: {(trip as any).token || 'N/A'}
+                    Token: {trip.token || 'N/A'}
                 </span>
             </div>
             <div className="bg-gray-100 p-1 rounded-full">
@@ -105,11 +106,16 @@ const OnTripUI: React.FC<OnTripUIProps> = ({ trip, tripStage, onArrivedAtPickup,
           <div className="h-10 w-px bg-gray-200"></div>
 
           <div className="relative">
-             <button onClick={onOpenChat} className="flex flex-col items-center space-y-1 group">
+             <button onClick={onOpenChat} className="flex flex-col items-center space-y-1 group relative">
                 <div className="bg-blue-100 p-3 rounded-full group-hover:bg-blue-200 transition-colors">
                     <ChatIcon className="w-6 h-6 text-blue-600" />
                 </div>
                 <span className="text-xs font-medium text-slate-600">Chat</span>
+                {unreadCount > 0 && (
+                    <span className="absolute -top-1 right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-white">
+                        {unreadCount}
+                    </span>
+                )}
             </button>
              {lastSentMessage && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[200px] bg-slate-800 text-white text-xs rounded-lg px-3 py-1 shadow-lg animate-fade-in-out-subtle">

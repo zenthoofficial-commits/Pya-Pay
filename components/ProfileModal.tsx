@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { CloseIcon } from './Icons';
-import { auth } from '../services/firebase';
+import { auth, db } from '../services/firebase';
 import { signOut } from 'firebase/auth';
+import { ref, update } from 'firebase/database';
 
 interface ProfileModalProps {
   driverId: string;
@@ -14,13 +15,44 @@ interface ProfileModalProps {
 
 const ProfileModal: React.FC<ProfileModalProps> = ({ driverId, onClose, isOnline, onGoOnline, onGoOffline }) => {
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-    const [autoAccept, setAutoAccept] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [localProfilePic, setLocalProfilePic] = useState<string | null>(null);
 
     const handleLogout = () => {
         signOut(auth).catch(error => {
             console.error("Logout failed:", error);
             alert("ထွက်ခွာရာတွင် အမှားအယွင်းဖြစ်နေပါသည်။");
         });
+    };
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const base64String = reader.result as string;
+                // Limit size to prevent database issues (approx 100kb limit logic would be good, but simple here)
+                if (base64String.length > 500000) {
+                     alert("ဓာတ်ပုံဖိုင်ဆိုဒ် ကြီးလွန်းပါသည်။");
+                     return;
+                }
+                setLocalProfilePic(base64String);
+                
+                // Update in DB
+                try {
+                    const driverRef = ref(db, `drivers/${driverId}`);
+                    await update(driverRef, { profilePic: base64String });
+                } catch (err) {
+                    console.error("Failed to update profile pic", err);
+                    alert("ပုံပြောင်းလဲမရနိုင်ပါ");
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const triggerFileInput = () => {
+        fileInputRef.current?.click();
     };
 
   return (
@@ -34,12 +66,28 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ driverId, onClose, isOnline
         </div>
 
         <div className="flex items-center space-x-4 mb-8 bg-blue-50 p-4 rounded-xl border border-blue-100">
-            <img src={`https://i.pravatar.cc/80?u=${driverId}`} alt="Driver" className="w-16 h-16 rounded-full border-4 border-white shadow-sm" />
+            <div className="relative group cursor-pointer" onClick={triggerFileInput}>
+                <img 
+                    src={localProfilePic || `https://i.pravatar.cc/150?u=${driverId}`} 
+                    alt="Driver" 
+                    className="w-16 h-16 rounded-full border-4 border-white shadow-sm object-cover" 
+                />
+                <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                </div>
+                <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={handleImageChange}
+                />
+            </div>
             <div>
-                <h3 className="text-xl font-bold text-slate-800">ကိုဇော်</h3>
+                <h3 className="text-xl font-bold text-slate-800">My Profile</h3>
                 <p className="text-sm text-slate-500 font-medium">Rating: <span className="text-orange-500">4.8 ★</span></p>
                 <div className="mt-1 text-sm text-slate-600">
-                    <p>Toyota Aqua • <span className="font-mono font-bold text-blue-600">5Q/1234</span></p>
+                    <p className="text-xs text-blue-500 cursor-pointer" onClick={triggerFileInput}>Change Photo</p>
                 </div>
             </div>
         </div>
@@ -56,12 +104,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ driverId, onClose, isOnline
                 <span className="font-medium text-slate-600">Notifications</span>
                 <button onClick={() => setNotificationsEnabled(!notificationsEnabled)} className={`w-14 h-8 rounded-full p-1 transition-colors duration-300 ${notificationsEnabled ? 'bg-green-500' : 'bg-gray-300'}`}>
                     <div className={`w-6 h-6 rounded-full bg-white shadow-md transform transition-transform duration-300 ${notificationsEnabled ? 'translate-x-6' : ''}`} />
-                </button>
-            </div>
-             <div className="flex justify-between items-center">
-                <span className="font-medium text-slate-600">Auto Accept</span>
-                <button onClick={() => setAutoAccept(!autoAccept)} className={`w-14 h-8 rounded-full p-1 transition-colors duration-300 ${autoAccept ? 'bg-green-500' : 'bg-gray-300'}`}>
-                    <div className={`w-6 h-6 rounded-full bg-white shadow-md transform transition-transform duration-300 ${autoAccept ? 'translate-x-6' : ''}`} />
                 </button>
             </div>
         </div>

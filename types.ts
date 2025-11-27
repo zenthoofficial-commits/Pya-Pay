@@ -1,3 +1,4 @@
+
 export interface LatLngLiteral {
   lat: number;
   lng: number;
@@ -25,6 +26,13 @@ export interface Trip {
   createdAt?: number; 
   completedAt?: number;
   cancellationFee?: number;
+  // New fields
+  requestedDriverId?: string;
+  declinedDriverIds?: string[];
+  token?: string;
+  commissionAmount?: number;
+  appliedRate?: number;
+  appliedPlatformFee?: number;
 }
 
 export interface Message {

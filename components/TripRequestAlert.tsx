@@ -32,7 +32,7 @@ const TripRequestAlert: React.FC<TripRequestAlertProps> = ({ trip, onAccept, onD
                     {isDirectRequest ? 'Direct Booking!' : 'Trip Request'}
                  </h2>
                  <p className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded inline-block mt-1 font-bold border border-slate-200">
-                    Token: {(trip as any).token || 'N/A'}
+                    Token: {trip.token || 'N/A'}
                  </p>
                  {isDirectRequest && <p className="text-xs text-slate-500 mt-1">Passenger chose you directly</p>}
             </div>

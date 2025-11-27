@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { ref, onChildAdded, query as dbQuery, orderByChild, equalTo, update, remove, onValue, set, serverTimestamp, get, off } from 'firebase/database';
+import { ref, onChildAdded, query as dbQuery, orderByChild, equalTo, update, remove, onValue, set, serverTimestamp, get, off, limitToLast } from 'firebase/database';
 import { auth, db } from './services/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { Trip, LatLngLiteral } from './types';
@@ -77,26 +77,18 @@ const QuickReplyPopup: React.FC<{onSend: (msg: string) => void, onOpenChat: () =
     )
 }
 
-const getHaversineDistance = (p1: LatLngLiteral, p2: LatLngLiteral): number => {
-    const R = 6371e3; // Earth's radius in metres
-    const φ1 = p1.lat * Math.PI/180;
-    const φ2 = p2.lat * Math.PI/180;
-    const Δφ = (p2.lat-p1.lat) * Math.PI/180;
-    const Δλ = (p2.lng-p1.lng) * Math.PI/180;
-
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-    return R * c; // in metres
-}
+const showSystemNotification = (title: string, body: string) => {
+    if (Notification.permission === "granted") {
+        new Notification(title, { body, icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063823.png' });
+    }
+};
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(true);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [driverId, setDriverId] = useState<string | null>(null);
+  const [driverProfilePic, setDriverProfilePic] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showEarnings, setShowEarnings] = useState(false);
@@ -117,6 +109,7 @@ const App: React.FC = () => {
   const [viewingTripSummary, setViewingTripSummary] = useState<Trip | null>(null);
 
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const [showSOSConfirm, setShowSOSConfirm] = useState(false);
   const [showQuickReplies, setShowQuickReplies] = useState(false);
   const [lastSentMessage, setLastSentMessage] = useState<string | null>(null);
@@ -124,6 +117,7 @@ const App: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const tripRequestAudioRef = useRef<HTMLAudioElement | null>(null);
+  const messageSoundRef = useRef<HTMLAudioElement | null>(null);
   const locationRef = useRef(location);
   const mapRef = useRef<MapHandles>(null);
   const hasPlayedSoundForCurrentRequests = useRef(false);
@@ -171,7 +165,7 @@ const App: React.FC = () => {
                      return;
                 }
 
-                // 1. Listen for Profile (Bans & Online Status)
+                // 1. Listen for Profile (Bans & Online Status & Profile Pic)
                 const driverRef = ref(db, `drivers/${currentDriverId}`);
                 const profileListener = onValue(driverRef, (snapshot) => {
                     if (snapshot.exists()) {
@@ -183,26 +177,19 @@ const App: React.FC = () => {
                             return;
                         }
                         setIsOnline(data.isOnline || false);
+                        setDriverProfilePic(data.profilePic || null);
                     } else {
                         auth.signOut();
                     }
                 });
                 dataListeners.push(() => off(driverRef, 'value', profileListener));
 
-                // 2. Listen for Completed Trips (tripHistory) & Auto Delete
+                // 2. Listen for Completed Trips
                 const completedTripsRef = ref(db, `completedTrips/${currentDriverId}`);
                 const historyListener = onValue(completedTripsRef, (snapshot) => {
                     if (snapshot.exists()) {
                         const tripsData = snapshot.val();
                         const tripsArray = Object.values(tripsData) as Trip[];
-                        
-                        const twoDaysAgo = Date.now() - (2 * 24 * 60 * 60 * 1000);
-                        tripsArray.forEach(trip => {
-                             if (trip.completedAt && trip.completedAt < twoDaysAgo) {
-                                 remove(ref(db, `completedTrips/${currentDriverId}/${trip.id}`));
-                             }
-                        });
-
                         setTripHistory(tripsArray.sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0)));
                     } else {
                         setTripHistory([]);
@@ -281,12 +268,9 @@ const App: React.FC = () => {
 
     tripHistory.forEach(trip => {
         let deduction = 0;
-        // @ts-ignore - Check if trip has stored commission data
         if (trip.commissionAmount) {
-             // @ts-ignore
             deduction = trip.commissionAmount;
         } else {
-            // Fallback to current settings if not stored
             deduction = fees.platformFee + Math.round((trip.fare - fees.platformFee) * (fees.commissionRate / 100));
         }
         currentBalance -= deduction;
@@ -298,7 +282,34 @@ const App: React.FC = () => {
 
   useEffect(() => {
     tripRequestAudioRef.current = new Audio("data:audio/wav;base64,UklGRlFFT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YUFENQDI7PAA8gDwAPUA9ADzAPIBAAIEAwQDBAIBAAAAAP8A/gD4APUA8gDxAPIA8gDzAO8A7ADoAN4A2gDYANoA3gDkAO0A9AEAAv9//wD+APwA+gD7AP0AAQIDBAUGBwgJCgsMDQ4PDxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==");
+    messageSoundRef.current = new Audio("data:audio/wav;base64,UklGRlFFT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YUFENQDI7PAA8gDwAPUA9ADzAPIBAAIEAwQDBAIBAAAAAP8A/gD4APUA8gDxAPIA8gDzAO8A7ADoAN4A2gDYANoA3gDkAO0A9AEAAv9//wD+APwA+gD7AP0AAQIDBAUGBwgJCgsMDQ4PDxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==");
   }, []);
+
+  // Listen for Chat Messages (Notification)
+  useEffect(() => {
+    if (!activeTrip) {
+        setUnreadMessages(0);
+        return;
+    }
+    
+    // Only listen if chat is closed
+    const messagesRef = ref(db, `chats/${activeTrip.id}/messages`);
+    const q = dbQuery(messagesRef, orderByChild('timestamp'), limitToLast(1));
+    
+    const unsubscribe = onChildAdded(q, (snapshot) => {
+        const msg = snapshot.val();
+        if (msg.sender === 'passenger' && !isChatOpen) {
+            setUnreadMessages(prev => prev + 1);
+            showSystemNotification("Passenger Message", msg.text);
+            if (messageSoundRef.current) {
+                messageSoundRef.current.currentTime = 0;
+                messageSoundRef.current.play().catch(e => console.warn("Sound blocked", e));
+            }
+        }
+    });
+    
+    return () => unsubscribe();
+  }, [activeTrip, isChatOpen]);
 
   // Listen for trip requests
   useEffect(() => {
@@ -316,7 +327,14 @@ const App: React.FC = () => {
         const potentialTripsPromises = Object.entries(tripsData)
           .map(([id, data]) => ({ id, ...(data as any) }))
           .filter(trip => {
+             // NEW: Check if this driver is the requested one. 
+             // Logic: The passenger app or backend queues drivers. We only show the request if requestedDriverId matches me.
+             // OR if there is no specific requested ID but also no driver assigned.
              if (trip.requestedDriverId && trip.requestedDriverId !== driverId) return false;
+             
+             // Check if I previously declined it
+             if (trip.declinedDriverIds && trip.declinedDriverIds.includes(driverId)) return false;
+
              return !trip.driverId;
           })
           .map(async (trip) => {
@@ -331,6 +349,11 @@ const App: React.FC = () => {
           });
         
         const resolvedTrips = (await Promise.all(potentialTripsPromises)).filter((t): t is Trip => t !== null);
+        
+        if (resolvedTrips.length > 0 && resolvedTrips.length > tripRequests.length) {
+            showSystemNotification("New Trip Request", "ခရီးစဉ်အသစ် ရောက်ရှိနေပါသည်။");
+        }
+
         setTripRequests(resolvedTrips.sort((a,b) => b.fare - a.fare));
       } else {
         setTripRequests([]); 
@@ -363,6 +386,7 @@ const App: React.FC = () => {
         if (snapshot.exists()) {
             const updatedTripData = snapshot.val() as Trip;
             if (updatedTripData.status === 'cancelled') {
+                showSystemNotification("Trip Cancelled", "ခရီးသည်က ခရီးစဉ်ကို ပယ်ဖျက်လိုက်ပါသည်။");
                 const cancellationFee = updatedTripData.cancellationFee || null;
                 setCancellationAlert({ show: true, fee: cancellationFee });
             }
@@ -415,14 +439,16 @@ const App: React.FC = () => {
   
   const handleGoOnline = async () => {
     if (!driverId) return;
+    
+    if (Notification.permission !== "granted") {
+        await Notification.requestPermission();
+    }
+
     if (tripRequestAudioRef.current) {
         tripRequestAudioRef.current.load();
     }
     if (typeof window.DeviceOrientationEvent.requestPermission === 'function') {
         await window.DeviceOrientationEvent.requestPermission();
-    }
-    if (Notification.permission !== "granted") {
-        await Notification.requestPermission();
     }
     
     const driverRef = ref(db, `drivers/${driverId}`);
@@ -439,8 +465,26 @@ const App: React.FC = () => {
     setIsOnline(false);
   };
 
-  const handleDeclineTrip = (tripId: string) => {
+  const handleDeclineTrip = async (tripId: string) => {
+      if (!driverId) return;
+      // Optimistically remove locally
       setTripRequests(prev => prev.filter(t => t.id !== tripId));
+      
+      try {
+          // Update Firebase so the Passenger app knows to skip this driver
+          const tripRef = ref(db, `trips/${tripId}`);
+          const snapshot = await get(tripRef);
+          if (snapshot.exists()) {
+              const tripData = snapshot.val();
+              const declined = tripData.declinedDriverIds || [];
+              if (!declined.includes(driverId)) {
+                  declined.push(driverId);
+                  await update(tripRef, { declinedDriverIds: declined });
+              }
+          }
+      } catch (e) {
+          console.error("Error declining trip", e);
+      }
   };
   
   const handleArrivedAtPickup = async () => {
@@ -476,7 +520,6 @@ const App: React.FC = () => {
     setIsProcessing(true);
     
     try {
-        // Calculate commission to snapshot it
         const commissionAmount = fees.platformFee + Math.round((activeTrip.fare - fees.platformFee) * (fees.commissionRate / 100));
 
         const completedTrip = { 
@@ -540,6 +583,7 @@ const App: React.FC = () => {
 
   const handleOpenFullChat = () => {
       setShowQuickReplies(false);
+      setUnreadMessages(0); // Reset unread when opening
       setIsChatOpen(true);
   };
 
@@ -576,9 +620,10 @@ const App: React.FC = () => {
               setShowQuickReplies(false);
           }}
           isLoading={isProcessing}
+          unreadCount={unreadMessages}
         />
       ) : (
-         <Header balance={balance} onProfileClick={() => setShowProfile(true)} onWalletClick={() => setShowEarnings(true)} />
+         <Header balance={balance} onProfileClick={() => setShowProfile(true)} onWalletClick={() => setShowEarnings(true)} profilePic={driverProfilePic} />
       )}
       
       {showProfile && driverId && 
@@ -606,10 +651,7 @@ const App: React.FC = () => {
         <TripSummaryModal 
             trip={viewingTripSummary} 
             onClose={handleCloseTripSummary} 
-            // Use snapshot values if available, else current settings
-            // @ts-ignore
             commissionRate={viewingTripSummary.appliedRate ?? fees.commissionRate}
-            // @ts-ignore
             platformFee={viewingTripSummary.appliedPlatformFee ?? fees.platformFee}
         />
       }

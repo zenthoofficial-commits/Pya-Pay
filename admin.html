@@ -31,12 +31,19 @@
         .nav-link.active { background-color: rgba(59, 130, 246, 0.1); color: #60a5fa; border-left-color: #3b82f6; }
         
         .leaflet-container .leaflet-control-attribution { display: none; }
-        /* Light map styles override */
         .leaflet-routing-container { display: none; }
         
         .tab-btn.active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
         .noti-badge { background-color: #ef4444; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 9999px; font-weight: bold; margin-left: auto; }
         .driver-pending-dot { width: 10px; height: 10px; background-color: #ef4444; border-radius: 50%; display: inline-block; margin-left: 8px; box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2); vertical-align: middle; }
+        
+        /* Map Picking Styles */
+        #map-center-pin {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -100%); /* Tip of pin at center */
+            z-index: 1000; pointer-events: none;
+            transition: transform 0.2s;
+        }
     </style>
 </head>
 <body class="text-sm h-screen overflow-hidden flex flex-col">
@@ -68,6 +75,7 @@
             </div>
             <nav class="flex-1 overflow-y-auto py-4 space-y-1">
                 <a href="#dashboard-view" class="nav-link active flex items-center gap-3 px-6 py-3 text-slate-300">Dashboard</a>
+                <a href="#dispatch-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300 bg-blue-900/20 text-blue-400 border-l-blue-500">Manual Dispatch</a>
                 <a href="#drivers-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300">
                     Drivers List
                     <span id="drivers-badge" class="noti-badge hidden">0</span>
@@ -112,6 +120,56 @@
                     </div>
                 </div>
 
+                <!-- Manual Dispatch View -->
+                <div id="dispatch-view" class="view-content hidden h-full flex flex-col">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
+                        <div class="col-span-1 space-y-4">
+                            <div class="card p-4 rounded-xl">
+                                <div class="flex justify-between items-center mb-3">
+                                    <h3 class="font-bold text-lg">Create Trip</h3>
+                                    <button onclick="resetDispatchMap()" class="text-xs text-red-500 border border-red-200 px-2 py-1 rounded hover:bg-red-50">Reset Map</button>
+                                </div>
+                                <div class="space-y-3">
+                                    <input id="disp-phone" type="text" placeholder="Passenger Phone (Required)" class="w-full border p-2 rounded">
+                                    <div class="p-2 bg-blue-50 border border-blue-200 rounded">
+                                        <label class="text-xs text-blue-500 font-bold">PICKUP</label>
+                                        <p id="disp-pickup-addr" class="text-sm font-semibold truncate">Select on Map</p>
+                                        <button onclick="setPickMode('pickup')" class="text-xs bg-blue-600 text-white px-2 py-1 rounded mt-1">Set Pickup</button>
+                                    </div>
+                                    <div class="p-2 bg-red-50 border border-red-200 rounded">
+                                        <label class="text-xs text-red-500 font-bold">DROPOFF</label>
+                                        <p id="disp-dropoff-addr" class="text-sm font-semibold truncate">Select on Map</p>
+                                        <button onclick="setPickMode('dropoff')" class="text-xs bg-red-600 text-white px-2 py-1 rounded mt-1">Set Dropoff</button>
+                                    </div>
+                                    <div id="disp-fare-info" class="hidden bg-slate-100 p-2 rounded">
+                                        <p>Dist: <span id="disp-dist" class="font-bold">-</span> km</p>
+                                        <p>Est. Fare: <span id="disp-fare" class="font-bold text-green-600 text-lg">-</span> Ks</p>
+                                    </div>
+                                    <button id="btn-dispatch" onclick="createManualTrip()" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 shadow-lg" disabled>Dispatch Driver</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-span-2 relative card rounded-xl overflow-hidden h-[500px] md:h-auto">
+                            <div id="dispatch-map" class="absolute inset-0 z-10"></div>
+                            <div id="map-toast" class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-4 py-2 rounded-full z-20 shadow-xl">Use Pin to Select Location...</div>
+                            
+                            <!-- Fixed Center Pin for Admin Dispatch -->
+                            <div id="map-center-pin" class="hidden z-50">
+                                <img id="pin-image" src="" class="w-10 h-10 drop-shadow-2xl" alt="Pin">
+                                <div class="w-2 h-2 bg-black/30 rounded-full absolute -bottom-1 left-1/2 -translate-x-1/2 blur-[1px]"></div>
+                            </div>
+
+                            <!-- Confirm Button Overlay -->
+                            <button id="confirm-pick-btn" onclick="confirmDispatchPick()" class="hidden absolute bottom-8 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-white font-bold py-2 px-6 rounded-full shadow-xl hover:bg-slate-700">Confirm Location</button>
+                            
+                            <!-- Recenter Button for Dispatch -->
+                            <button id="dispatch-recenter-btn" class="absolute bottom-6 right-6 z-20 bg-white text-blue-600 p-3 rounded-full shadow-xl hover:bg-slate-50 border border-slate-200">
+                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Drivers View -->
                 <div id="drivers-view" class="view-content hidden space-y-6">
                     <div class="flex justify-between">
@@ -128,6 +186,13 @@
 
                 <!-- Trips View -->
                 <div id="trips-view" class="view-content hidden space-y-6">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-slate-800">Trip Management</h3>
+                        <div class="relative">
+                            <input type="text" id="trip-search-input" placeholder="Search by Token (e.g. T-1234)..." class="pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm w-64 focus:ring-2 focus:ring-blue-500 outline-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        </div>
+                    </div>
                     <div class="card rounded-xl overflow-hidden shadow-sm">
                         <table class="w-full text-left">
                             <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-bold border-b border-slate-200">
@@ -137,6 +202,7 @@
                                     <th class="p-4">Route</th>
                                     <th class="p-4">Fare</th>
                                     <th class="p-4">Status</th>
+                                    <th class="p-4 text-right">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="trips-list-table" class="divide-y divide-slate-100 text-sm"></tbody>
@@ -213,6 +279,51 @@
             </div>
         </div>
     </div>
+    
+    <!-- Trip Details Modal -->
+    <div id="trip-details-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl border border-slate-200 flex flex-col h-[90vh]">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-800 text-white rounded-t-xl">
+                <div>
+                    <h3 class="text-lg font-bold">Trip Details</h3>
+                    <p class="text-xs text-slate-300 font-mono" id="td-token-header"></p>
+                </div>
+                <button onclick="closeModal('trip-details-modal')" class="text-white hover:text-red-400"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+            <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+                <div class="w-full md:w-1/3 p-4 overflow-y-auto border-r border-slate-100 space-y-4 bg-slate-50">
+                    <div class="bg-white p-3 rounded border shadow-sm">
+                        <p class="text-xs text-slate-400 font-bold mb-1">STATUS</p>
+                        <span id="td-status" class="px-2 py-1 rounded text-xs font-bold">-</span>
+                    </div>
+                     <div class="bg-white p-3 rounded border shadow-sm">
+                        <p class="text-xs text-slate-400 font-bold mb-1">FARE</p>
+                        <span id="td-fare" class="text-xl font-bold text-green-600">-</span>
+                    </div>
+                    <div class="bg-white p-3 rounded border shadow-sm">
+                        <p class="text-xs text-slate-400 font-bold mb-1">DRIVER</p>
+                        <p class="font-bold text-slate-800" id="td-driver">-</p>
+                        <p class="text-xs text-slate-500" id="td-car">-</p>
+                    </div>
+                     <div class="bg-white p-3 rounded border shadow-sm">
+                        <p class="text-xs text-slate-400 font-bold mb-1">PASSENGER</p>
+                        <p class="font-bold text-slate-800" id="td-passenger">-</p>
+                        <p class="text-xs text-slate-500" id="td-passenger-phone">-</p>
+                    </div>
+                     <div class="bg-white p-3 rounded border shadow-sm">
+                        <p class="text-xs text-slate-400 font-bold mb-1">ROUTE</p>
+                        <div class="text-xs space-y-2">
+                            <div><span class="text-green-600 font-bold">A</span> <span id="td-pickup">-</span></div>
+                            <div><span class="text-red-500 font-bold">B</span> <span id="td-dropoff">-</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-full md:w-2/3 relative bg-slate-200">
+                    <div id="trip-map" class="absolute inset-0 z-10"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Add Driver Modal -->
     <div id="add-driver-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
@@ -246,33 +357,58 @@
         const auth = getAuth(app);
         const db = getDatabase(app);
 
-        let map, adminMarker, measureControl;
+        let map, adminMarker, measureControl, tripMap, tripRouteControl, dispatchMap, dispatchRouteControl;
         let measurePoints = [];
         let isMeasuring = false;
         let currentDriverId = null;
         let driversCache = {};
         let transactionsCache = {};
+        let globalAllTrips = []; // Cache for search
+        
+        // Dispatch Mode
+        let pickMode = null;
+        let dispPickup = null;
+        let dispDropoff = null;
+        let currentFare = 0;
+        let currentDist = 0;
+        
+        // SVG Icons
+        const BLUE_PIN_SVG = `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="#3b82f6" stroke="white" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>')}`;
+        const RED_PIN_SVG = `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="#ef4444" stroke="white" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>')}`;
+
 
         const dom = {
             loginScreen: document.getElementById('login-screen'),
             dashboard: document.getElementById('dashboard'),
             sidebar: document.getElementById('sidebar'),
             overlay: document.getElementById('sidebar-overlay'),
-            measureInfo: document.getElementById('measure-info')
+            measureInfo: document.getElementById('measure-info'),
+            
+            // Dispatch UI
+            mapToast: document.getElementById('map-toast'),
+            mapCenterPin: document.getElementById('map-center-pin'),
+            pinImage: document.getElementById('pin-image'),
+            confirmPickBtn: document.getElementById('confirm-pick-btn'),
+            dispatchRecenterBtn: document.getElementById('dispatch-recenter-btn')
         };
+        
+        // Helper notification
+        function showAdminNotification(title, body) {
+            if (Notification.permission === "granted") {
+                new Notification(title, { body, icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063823.png' });
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission();
+            }
+        }
 
         // Auth
         onAuthStateChanged(auth, async (user) => {
             if(user) {
-                const snap = await get(ref(db, `admins/${user.uid}`));
-                if(snap.exists()) {
-                    dom.loginScreen.classList.add('hidden');
-                    dom.dashboard.classList.remove('hidden');
-                    initData();
-                    initMap();
-                } else {
-                    signOut(auth); 
-                }
+                dom.loginScreen.classList.add('hidden');
+                dom.dashboard.classList.remove('hidden');
+                initData();
+                initMap();
+                if (Notification.permission !== "granted") Notification.requestPermission();
             } else {
                 dom.loginScreen.classList.remove('hidden');
                 dom.dashboard.classList.add('hidden');
@@ -293,9 +429,12 @@
                 document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
                 link.classList.add('active');
                 document.querySelectorAll('.view-content').forEach(v => v.classList.add('hidden'));
-                document.getElementById(link.getAttribute('href').substring(1)).classList.remove('hidden');
+                const viewId = link.getAttribute('href').substring(1);
+                document.getElementById(viewId).classList.remove('hidden');
                 dom.sidebar.classList.remove('open'); dom.overlay.classList.add('hidden');
-                if(link.getAttribute('href') === '#map-view' && map) setTimeout(() => map.invalidateSize(), 200);
+                
+                if(viewId === 'map-view' && map) setTimeout(() => map.invalidateSize(), 200);
+                if(viewId === 'dispatch-view') initDispatchMap();
             };
         });
         document.getElementById('mobile-menu-btn').onclick = () => { dom.sidebar.classList.add('open'); dom.overlay.classList.remove('hidden'); };
@@ -314,34 +453,55 @@
                 document.getElementById('stat-online').innerText = Object.keys(locs).length;
                 updateMapMarkers(locs);
             });
+            
+            // Trip Data Fetching Logic (Consolidated)
+            let activeTripsList = [];
+            let completedTripsList = [];
+            
             onValue(ref(db, 'trips'), snap => {
                 const trips = snap.val() || {};
-                const list = Object.values(trips);
-                document.getElementById('stat-trips').innerText = list.filter(t => ['accepted','at_pickup','to_dropoff'].includes(t.status)).length;
-                renderTrips(list);
+                activeTripsList = Object.values(trips);
+                document.getElementById('stat-trips').innerText = activeTripsList.filter(t => ['accepted','at_pickup','to_dropoff'].includes(t.status)).length;
+                updateTripsTable(activeTripsList, completedTripsList);
             });
+            
              onValue(ref(db, 'completedTrips'), snap => {
                 let totalCommission = 0;
+                completedTripsList = [];
                 if(snap.exists()) {
-                    Object.values(snap.val()).forEach(driverTrips => {
-                        Object.values(driverTrips).forEach(t => {
+                    Object.entries(snap.val()).forEach(([driverId, driverTrips]) => {
+                        Object.entries(driverTrips).forEach(([tripId, t]) => {
                              const comm = t.commissionAmount || 0; 
                              totalCommission += comm;
+                             // Enforce status completed for display
+                             completedTripsList.push({ ...t, status: 'completed', id: tripId, driverId: driverId });
                         });
                     });
                 }
                 document.getElementById('stat-revenue').innerText = `${totalCommission.toLocaleString()} Ks`;
+                updateTripsTable(activeTripsList, completedTripsList);
             });
             
-            // Listen to all transactions to count pending requests for notification
+            // Listen to all transactions for notification
+            let initialLoad = true;
             onValue(ref(db, 'transactions'), snap => {
                 transactionsCache = snap.val() || {};
                 let pendingCount = 0;
+                let newPending = false;
                 Object.values(transactionsCache).forEach(driverTxs => {
                     Object.values(driverTxs).forEach(tx => {
-                        if(tx.status === 'pending' && tx.type === 'topup') pendingCount++;
+                        if(tx.status === 'pending' && tx.type === 'topup') {
+                            pendingCount++;
+                            // Simple logic: if not initial load and pending, trigger
+                            if (!initialLoad) newPending = true; 
+                        }
                     });
                 });
+                
+                if (newPending) {
+                    showAdminNotification("New Top-up Request", "Driver has requested a top-up.");
+                }
+
                 const badge = document.getElementById('drivers-badge');
                 if(pendingCount > 0) {
                     badge.innerText = pendingCount;
@@ -349,8 +509,8 @@
                 } else {
                     badge.classList.add('hidden');
                 }
-                // Re-render drivers to update dots
                 renderDrivers(driversCache);
+                initialLoad = false;
             });
 
             // Settings Load
@@ -361,6 +521,28 @@
                 document.getElementById('base-fare-input').value = fees.baseFare || 1500;
                 document.getElementById('price-per-km-input').value = fees.pricePerKm || 500;
             });
+        }
+        
+        function updateTripsTable(active, completed) {
+            globalAllTrips = [
+                ...active.map(t => ({...t, _sortTime: t.createdAt})),
+                ...completed.map(t => ({...t, _sortTime: t.completedAt}))
+            ];
+            // Filter initially with empty search
+            filterAndRenderTrips(document.getElementById('trip-search-input').value);
+        }
+        
+        document.getElementById('trip-search-input').addEventListener('input', (e) => {
+            filterAndRenderTrips(e.target.value);
+        });
+        
+        function filterAndRenderTrips(searchTerm) {
+            const term = searchTerm.toLowerCase().trim();
+            const filtered = globalAllTrips.filter(t => {
+                return (t.token && t.token.toLowerCase().includes(term)) || 
+                       (t.id && t.id.toLowerCase().includes(term));
+            });
+            renderTrips(filtered);
         }
 
         document.getElementById('settings-form').onsubmit = async (e) => {
@@ -379,7 +561,6 @@
             Object.entries(drivers).forEach(([uid, d]) => {
                 const isBanned = d.bannedUntil && d.bannedUntil > Date.now();
                 
-                // Check pending topup for this driver
                 let hasPending = false;
                 if (transactionsCache[uid]) {
                     hasPending = Object.values(transactionsCache[uid]).some(tx => tx.status === 'pending' && tx.type === 'topup');
@@ -406,36 +587,129 @@
             });
         }
 
-        function renderTrips(trips) {
+        function renderTrips(tripsList) {
             const tbody = document.getElementById('trips-list-table'); tbody.innerHTML = '';
-            trips.sort((a,b) => b.createdAt - a.createdAt).slice(0, 50).forEach(t => {
-                tbody.innerHTML += `
-                    <tr class="border-b border-slate-100 text-slate-600">
-                        <td class="p-4 font-mono font-bold text-blue-600"><span class="bg-blue-50 px-2 py-1 rounded">${t.token || 'N/A'}</span></td>
-                        <td class="p-4">${new Date(t.createdAt).toLocaleTimeString()}</td>
-                        <td class="p-4 max-w-xs truncate">${t.pickupAddress ? t.pickupAddress.split(',')[0] : '...'} -> ${t.dropoffAddress ? t.dropoffAddress.split(',')[0] : '...'}</td>
-                        <td class="p-4 font-mono font-bold text-slate-800">${t.fare}</td>
-                        <td class="p-4 font-bold ${t.status === 'completed' ? 'text-emerald-500' : 'text-amber-500'}">${t.status}</td>
-                    </tr>
+            
+            tripsList.sort((a,b) => b._sortTime - a._sortTime).forEach(t => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-slate-100 text-slate-600 hover:bg-slate-50 cursor-pointer';
+                const statusColor = t.status === 'completed' ? 'text-emerald-500' : (t.status === 'cancelled' ? 'text-red-500' : 'text-amber-500');
+                
+                tr.innerHTML = `
+                    <td class="p-4 font-mono font-bold text-blue-600" onclick="openTripDetails(this.parentElement.dataset.trip)"><span class="bg-blue-50 px-2 py-1 rounded">${t.token || 'N/A'}</span></td>
+                    <td class="p-4" onclick="openTripDetails(this.parentElement.dataset.trip)">${new Date(t._sortTime).toLocaleTimeString()}</td>
+                    <td class="p-4 max-w-xs truncate" onclick="openTripDetails(this.parentElement.dataset.trip)">${t.pickupAddress ? t.pickupAddress.split(',')[0] : '...'} -> ${t.dropoffAddress ? t.dropoffAddress.split(',')[0] : '...'}</td>
+                    <td class="p-4 font-mono font-bold text-slate-800" onclick="openTripDetails(this.parentElement.dataset.trip)">${t.fare}</td>
+                    <td class="p-4 font-bold ${statusColor}" onclick="openTripDetails(this.parentElement.dataset.trip)">${t.status}</td>
+                    <td class="p-4 text-right">
+                        <button class="text-red-400 hover:text-red-600 p-2" title="Delete Record" onclick="deleteTrip('${t.id}', '${t.driverId}')">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </td>
                 `;
+                // Attach trip data for click handler
+                tr.dataset.trip = JSON.stringify(t);
+                
+                // Override onclick for buttons to stop propagation
+                const btn = tr.querySelector('button');
+                btn.onclick = (e) => { e.stopPropagation(); deleteTrip(t.id, t.driverId); };
+                
+                tbody.appendChild(tr);
             });
         }
+        
+        window.deleteTrip = async (tripId, driverId) => {
+            if(!confirm("Are you sure you want to delete this trip record?")) return;
+            // Try deleting from active
+            await remove(ref(db, `trips/${tripId}`));
+            // Try deleting from completed (requires driverId)
+            if(driverId) {
+                await remove(ref(db, `completedTrips/${driverId}/${tripId}`));
+            }
+            // Refresh triggers automatically via listeners
+        };
+        
+        window.openTripDetails = async (tripJson) => {
+            const trip = typeof tripJson === 'string' ? JSON.parse(tripJson) : tripJson;
+            const modal = document.getElementById('trip-details-modal');
+            modal.classList.remove('hidden');
+            
+            document.getElementById('td-token-header').innerText = `Token: ${trip.token || 'N/A'}`;
+            document.getElementById('td-status').innerText = trip.status.toUpperCase();
+            document.getElementById('td-status').className = `px-2 py-1 rounded text-xs font-bold ${trip.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`;
+            document.getElementById('td-fare').innerText = `${trip.fare.toLocaleString()} Ks`;
+            document.getElementById('td-pickup').innerText = trip.pickupAddress || 'N/A';
+            document.getElementById('td-dropoff').innerText = trip.dropoffAddress || 'N/A';
+            
+            if(trip.driverId) {
+                const d = driversCache[trip.driverId];
+                if(d) {
+                    document.getElementById('td-driver').innerText = d.name;
+                    document.getElementById('td-car').innerText = `${d.carModel} - ${d.carPlate}`;
+                } else {
+                     document.getElementById('td-driver').innerText = 'Driver ID: ' + trip.driverId;
+                     document.getElementById('td-car').innerText = '-';
+                }
+            } else {
+                 document.getElementById('td-driver').innerText = 'Pending Assignment';
+                 document.getElementById('td-car').innerText = '-';
+            }
+            
+            if(trip.passengerId) {
+                const pSnap = await get(ref(db, `passengers/${trip.passengerId}`));
+                if(pSnap.exists()) {
+                    const p = pSnap.val();
+                    document.getElementById('td-passenger').innerText = p.name || 'Unknown';
+                    document.getElementById('td-passenger-phone').innerText = p.phone || 'N/A';
+                }
+            } else if (trip.passengerPhone) {
+                // For manual dispatch trips
+                document.getElementById('td-passenger').innerText = "Manual Booking";
+                document.getElementById('td-passenger-phone').innerText = trip.passengerPhone;
+            }
+            
+            setTimeout(() => {
+                if(!tripMap) {
+                    tripMap = L.map('trip-map', { zoomControl: false });
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(tripMap);
+                }
+                
+                tripMap.eachLayer(layer => {
+                    if (layer instanceof L.Marker || layer instanceof L.Polyline) {
+                        tripMap.removeLayer(layer);
+                    }
+                });
+                
+                const pickup = [trip.pickup.lat, trip.pickup.lng];
+                const dropoff = [trip.dropoff.lat, trip.dropoff.lng];
+                
+                L.marker(pickup).addTo(tripMap).bindPopup("Pickup").openPopup();
+                L.marker(dropoff).addTo(tripMap).bindPopup("Dropoff");
+                
+                if(tripRouteControl) tripMap.removeControl(tripRouteControl);
+                
+                tripRouteControl = L.Routing.control({
+                    waypoints: [ L.latLng(pickup), L.latLng(dropoff) ],
+                    createMarker: () => null,
+                    addWaypoints: false, draggableWaypoints: false, fitSelectedRoutes: true, show: false,
+                    lineOptions: { styles: [{color: '#3b82f6', opacity: 0.8, weight: 6}] }
+                }).addTo(tripMap);
 
-        // Driver Details & Finance
+                tripMap.invalidateSize();
+            }, 200);
+        };
+
         window.openDriverDetails = async (uid) => {
             currentDriverId = uid;
             const d = driversCache[uid];
             if(!d) return;
             document.getElementById('details-modal').classList.remove('hidden');
-            
-            // Setup Tabs
             const tabs = document.querySelectorAll('.tab-btn');
             tabs.forEach(t => t.onclick = () => {
                 tabs.forEach(x => x.classList.remove('active'));
                 t.classList.add('active');
                 renderModalContent(t.dataset.tab, d);
             });
-            // Default to info
             tabs[0].click();
         };
 
@@ -448,13 +722,16 @@
                 container.innerHTML = `
                     <div class="space-y-4 text-slate-800">
                         <div class="flex items-center gap-4">
-                            <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-2xl font-bold border-2 border-white shadow">${driver.name.charAt(0)}</div>
+                            <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-2xl font-bold border-2 border-white shadow overflow-hidden">
+                                 ${driver.profilePic ? `<img src="${driver.profilePic}" class="w-full h-full object-cover">` : driver.name.charAt(0)}
+                            </div>
                             <div><h2 class="text-2xl font-bold">${driver.name}</h2><p class="text-slate-500">${driver.email}</p></div>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div class="bg-slate-50 p-3 rounded border border-slate-200"><p class="text-xs text-slate-400 uppercase font-bold">Phone</p><p class="font-medium">${driver.phone}</p></div>
                             <div class="bg-slate-50 p-3 rounded border border-slate-200"><p class="text-xs text-slate-400 uppercase font-bold">NRC</p><p class="font-medium">${driver.nrc || 'N/A'}</p></div>
                             <div class="bg-slate-50 p-3 rounded border border-slate-200 col-span-2"><p class="text-xs text-slate-400 uppercase font-bold">Car</p><p class="font-medium">${driver.carModel} (${driver.carPlate})</p></div>
+                            <div class="bg-slate-50 p-3 rounded border border-slate-200 col-span-2"><p class="text-xs text-slate-400 uppercase font-bold">Password</p><p class="font-mono text-red-500 font-bold">${driver.password || 'Hidden'}</p></div>
                         </div>
 
                         <div class="bg-red-50 p-4 rounded-xl border border-red-200 mt-4">
@@ -473,18 +750,15 @@
                     </div>
                 `;
             } else {
-                // ... Finance Code ...
                  container.innerHTML = '<p class="text-slate-400 text-center">Loading Finance Data...</p>';
                 const historySnap = await get(ref(db, `completedTrips/${currentDriverId}`));
                 const transactionsSnap = await get(ref(db, `transactions/${currentDriverId}`));
                 const settingsSnap = await get(ref(db, 'settings/fees'));
                 const fees = settingsSnap.val() || { commissionRate: 14, platformFee: 100 };
                 
-                let trips = [];
                 let totalDeductions = 0; 
                 if(historySnap.exists()) {
-                    trips = Object.values(historySnap.val());
-                    trips.forEach(t => {
+                    Object.values(historySnap.val()).forEach(t => {
                         const deduct = t.commissionAmount || (fees.platformFee + Math.round((t.fare - fees.platformFee) * (fees.commissionRate/100)));
                         totalDeductions += deduct;
                     });
@@ -607,7 +881,7 @@
             await push(ref(db, `transactions/${uid}`), {
                 amount: amount,
                 date: serverTimestamp(),
-                type: type, // credit or debit
+                type: type, 
                 reason: reason,
                 status: 'approved'
             });
@@ -616,7 +890,6 @@
             renderModalContent('finance', d);
         }
 
-        // Map & Measure Code (Same as before)
         function initMap() {
             if(map) return;
             map = L.map('admin-map', { zoomControl: false }).setView([16.8409, 96.1735], 13);
@@ -665,13 +938,168 @@
                         const r = e.routes[0];
                         const dist = (r.summary.totalDistance / 1000).toFixed(1);
                         const time = Math.round(r.summary.totalTime / 60);
-                        // Using default static prices for quick measure tool, or could fetch from cache
                         const cost = Math.max(1500, Math.round((1500 + parseFloat(dist) * 500)/100)*100);
-                        L.popup().setLatLng(measurePoints[1]).setContent(`<div class="font-bold text-center text-slate-800"><p class="text-lg text-blue-600">${dist} km</p><p>${time} mins</p><p class="text-slate-500 border-t border-slate-200 mt-1 pt-1">Est: ${cost} Ks</p></div>`).openOn(map);
-                        measurePoints = []; dom.measureInfo.innerText = "Calculated. Click new points."; setTimeout(() => dom.measureInfo.innerText = "Click two points", 3000);
+                        L.popup().setLatLng(measurePoints[1]).setContent(`<div class="font-bold text-center text-slate-800"><p class="text-lg text-blue-600">${dist} km</p><p>${time} mins</p><p class="text-slate-500 border-t border-slate-200 mt-1 pt-1">Est: ${cost} Ks</p><button class="text-xs text-red-500 underline mt-1" onclick="resetMeasure()">Clear</button></div>`).openOn(map);
+                        measurePoints = []; dom.measureInfo.innerText = "Calculated.";
                     });
                 }
             });
+        }
+        
+        window.resetMeasure = () => {
+             if(measureControl) { map.removeControl(measureControl); measureControl = null; } 
+             map.closePopup();
+             measurePoints = [];
+             dom.measureInfo.innerText = "Click two points";
+        };
+        
+        // Dispatch Mode Logic
+        window.initDispatchMap = () => {
+             if(dispatchMap) { setTimeout(() => dispatchMap.invalidateSize(), 200); return; }
+             
+             dispatchMap = L.map('dispatch-map', { zoomControl: false }).setView([16.8409, 96.1735], 13);
+             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(dispatchMap);
+             
+             // Admin Location on Dispatch Map
+             if(navigator.geolocation) {
+                 navigator.geolocation.watchPosition(pos => {
+                     const latlng = [pos.coords.latitude, pos.coords.longitude];
+                     if(adminMarker) adminMarker.setLatLng(latlng); // Update main map marker if exists
+                     // Add simple marker to dispatch map
+                     L.circleMarker(latlng, { radius: 6, color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 1 }).addTo(dispatchMap);
+                     // Store for recenter
+                     dom.dispatchRecenterBtn.onclick = () => dispatchMap.setView(latlng, 15);
+                 });
+             }
+        }
+        
+        window.setPickMode = (mode) => {
+            pickMode = mode;
+            document.getElementById('map-toast').innerText = `Move map to set ${mode.toUpperCase()}`;
+            document.getElementById('map-toast').classList.remove('hidden');
+            
+            // Show Fixed Pin Overlay
+            dom.mapCenterPin.classList.remove('hidden');
+            dom.confirmPickBtn.classList.remove('hidden');
+            
+             // Set Pin Color based on target
+            if(mode === 'pickup') {
+                dom.pinImage.src = BLUE_PIN_SVG;
+                dom.confirmPickBtn.className = dom.confirmPickBtn.className.replace('bg-red-800', 'bg-blue-800').replace('hover:bg-red-700', 'hover:bg-blue-700');
+            } else {
+                dom.pinImage.src = RED_PIN_SVG;
+                dom.confirmPickBtn.className = dom.confirmPickBtn.className.replace('bg-blue-800', 'bg-red-800').replace('hover:bg-blue-700', 'hover:bg-red-700');
+            }
+        }
+        
+        window.confirmDispatchPick = async () => {
+            const center = dispatchMap.getCenter();
+            document.getElementById('map-toast').innerText = "Getting Address...";
+            
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${center.lat}&lon=${center.lng}`);
+                const data = await response.json();
+                const addr = data.display_name.split(',')[0];
+                const loc = { lat: center.lat, lng: center.lng, address: data.display_name };
+                
+                if(pickMode === 'pickup') {
+                    dispPickup = loc;
+                    document.getElementById('disp-pickup-addr').innerText = addr;
+                } else {
+                    dispDropoff = loc;
+                    document.getElementById('disp-dropoff-addr').innerText = addr;
+                }
+                
+                // Hide Pin UI
+                pickMode = null;
+                document.getElementById('map-toast').classList.add('hidden');
+                dom.mapCenterPin.classList.add('hidden');
+                dom.confirmPickBtn.classList.add('hidden');
+                
+                if(dispPickup && dispDropoff) calcDispatchRoute();
+                
+            } catch(err) { 
+                document.getElementById('map-toast').innerText = "Error getting address"; 
+            }
+        };
+        
+        window.resetDispatchMap = () => {
+            dispPickup = null; dispDropoff = null;
+            if(dispatchRouteControl) dispatchMap.removeControl(dispatchRouteControl);
+            document.getElementById('disp-pickup-addr').innerText = "Select on Map";
+            document.getElementById('disp-dropoff-addr').innerText = "Select on Map";
+            document.getElementById('disp-fare-info').classList.add('hidden');
+            document.getElementById('btn-dispatch').disabled = true;
+        };
+        
+        function calcDispatchRoute() {
+            if(dispatchRouteControl) dispatchMap.removeControl(dispatchRouteControl);
+            
+            dispatchRouteControl = L.Routing.control({
+                waypoints: [ L.latLng(dispPickup.lat, dispPickup.lng), L.latLng(dispDropoff.lat, dispDropoff.lng) ],
+                createMarker: () => null, show: false, addWaypoints: false, fitSelectedRoutes: true,
+                lineOptions: { styles: [{color: '#10b981', opacity: 0.8, weight: 6}] }
+            }).addTo(dispatchMap);
+
+            dispatchRouteControl.on('routesfound', (e) => {
+                const r = e.routes[0];
+                currentDist = (r.summary.totalDistance / 1000).toFixed(1);
+                const fees = { baseFare: parseInt(document.getElementById('base-fare-input').value), pricePerKm: parseInt(document.getElementById('price-per-km-input').value) };
+                currentFare = Math.max(2000, Math.round((fees.baseFare + parseFloat(currentDist) * fees.pricePerKm)/100)*100);
+                
+                document.getElementById('disp-fare-info').classList.remove('hidden');
+                document.getElementById('disp-dist').innerText = currentDist;
+                document.getElementById('disp-fare').innerText = currentFare.toLocaleString();
+                document.getElementById('btn-dispatch').disabled = false;
+            });
+        }
+        
+        window.createManualTrip = async () => {
+            const phone = document.getElementById('disp-phone').value;
+            if(!phone) return alert("Passenger Phone Required");
+            if(!dispPickup || !dispDropoff) return alert("Select locations");
+            
+            // Find Drivers
+            const snapshot = await get(ref(db, 'driverLocations'));
+            const drivers = [];
+            if(snapshot.exists()) {
+                snapshot.forEach(child => {
+                    const d = child.val();
+                    if(d.isAvailable) {
+                        const dist = L.latLng(dispPickup).distanceTo([d.lat, d.lng]);
+                        drivers.push({ id: child.key, dist });
+                    }
+                });
+            }
+            drivers.sort((a,b) => a.dist - b.dist);
+            
+            if(drivers.length === 0) return alert("No available drivers nearby");
+            
+            const tripId = `trip_manual_${Date.now()}`;
+            const token = `T-${Math.floor(1000 + Math.random() * 9000)}`;
+            
+            const trip = {
+                id: tripId, token,
+                passengerId: 'manual_dispatch',
+                passengerPhone: phone,
+                pickup: dispPickup, dropoff: dispDropoff,
+                pickupAddress: dispPickup.address, dropoffAddress: dispDropoff.address,
+                fare: currentFare,
+                status: 'pending',
+                createdAt: serverTimestamp(),
+                vehicleType: 'Normal',
+                paymentMethod: 'Cash',
+                requestTime: Date.now(),
+                requestedDriverId: drivers[0].id,
+                driverQueue: drivers.map(d => d.id),
+                declinedDriverIds: []
+            };
+            
+            await set(ref(db, `trips/${tripId}`), trip);
+            alert(`Trip Dispatched! Token: ${token}`);
+            
+            // Reset
+            resetDispatchMap();
         }
         
         function updateMapMarkers(locations) {
@@ -689,29 +1117,16 @@
             const f = new FormData(e.target);
             const d = Object.fromEntries(f.entries());
              try {
-                // Use a SECONDARY app instance to create the user so the Admin stays logged in
                 const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
                 const secondaryAuth = getAuth(secondaryApp);
                 const userCredential = await createUserWithEmailAndPassword(secondaryAuth, d.email, d.password);
                 const uid = userCredential.user.uid;
-                
-                // Sign out of secondary auth to clean up (IMPORTANT)
                 await signOut(secondaryAuth);
-
-                // Save driver details to Realtime Database using the main 'db' (Admin access)
-                await set(ref(db, `drivers/${uid}`), { 
-                    ...d, 
-                    isOnline: false, 
-                    createdAt: new Date().toISOString() 
-                });
-                
+                // IMPORTANT: Saving password for admin view per request (Not best practice but required)
+                await set(ref(db, `drivers/${uid}`), { ...d, isOnline: false, createdAt: new Date().toISOString() });
                 closeModal('add-driver-modal');
                 alert(`Driver Account Created Successfully!`);
-                
-            } catch(err) { 
-                console.error(err);
-                alert("Error: " + err.message); 
-            }
+            } catch(err) { alert("Error: " + err.message); }
         };
 
     </script>

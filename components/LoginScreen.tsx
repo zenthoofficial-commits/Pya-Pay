@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { auth } from '../services/firebase';
-import { signInWithEmailAndPassword, AuthError } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 const LoginScreen: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -24,7 +24,7 @@ const LoginScreen: React.FC = () => {
             await signInWithEmailAndPassword(auth, email, password);
             // If successful, onAuthStateChanged in App.tsx will handle the rest.
         } catch (signInError) {
-            const authError = signInError as AuthError;
+            const authError = signInError as any;
 
             if (authError.code === 'auth/user-not-found' || authError.code === 'auth/invalid-credential' || authError.code === 'auth/wrong-password') {
                 setError('အကောင့်မရှိပါ သို့မဟုတ် Password မှားယွင်းနေပါသည်။ အက်မင်ထံတွင် အကောင့်ဖွင့်ပါ။');

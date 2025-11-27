@@ -156,12 +156,8 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ onClose, balance, tripHis
                     if (item.type === 'trip') {
                         const trip = item.data as Trip;
                         // Use stored values if available (from legacy handling) or current props
-                        // @ts-ignore
                         const appliedRate = trip.appliedRate ?? commissionRate;
-                         // @ts-ignore
                         const appliedFee = trip.appliedPlatformFee ?? platformFee;
-
-                        // @ts-ignore
                         const deduction = trip.commissionAmount || (appliedFee + Math.round((trip.fare - appliedFee) * (appliedRate / 100)));
 
                         return (
@@ -171,7 +167,7 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ onClose, balance, tripHis
                                     <div>
                                         <div className="flex items-center gap-1">
                                             <p className="font-semibold text-slate-700 text-sm">Commission & Fee</p>
-                                            <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 rounded font-bold">{(trip as any).token}</span>
+                                            <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 rounded font-bold">{trip.token}</span>
                                         </div>
                                         <p className="text-xs text-gray-500">{getShortLocationName(trip.dropoffAddress)}</p>
                                     </div>
