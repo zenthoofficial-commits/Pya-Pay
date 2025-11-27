@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ref, onChildAdded, query as dbQuery, orderByChild, equalTo, update, remove, onValue, set, serverTimestamp, get, off } from 'firebase/database';
 import { auth, db } from './services/firebase';
@@ -16,7 +17,6 @@ import TripRequestAlert from './components/TripRequestAlert';
 import OnTripUI from './components/OnTripUI';
 import EarningsModal from './components/EarningsModal';
 import TripSummaryModal from './components/TripSummaryModal';
-import DestinationInput from './components/DestinationInput';
 import ChatModal from './components/ChatModal';
 import ConfirmModal from './components/ConfirmModal';
 import CancellationAlertModal from './components/CancellationAlertModal';
@@ -47,17 +47,17 @@ const QuickReplyPopup: React.FC<{onSend: (msg: string) => void, onOpenChat: () =
     return (
         <>
             <div className="absolute inset-0 bg-black/30 z-20" onClick={onClose}></div>
-            <div className="absolute bottom-16 left-4 right-4 bg-white border border-blue-200 rounded-xl p-4 shadow-xl z-20 space-y-2 animate-slide-up">
+            <div className="absolute bottom-24 left-4 right-4 bg-white border border-gray-200 rounded-xl p-4 shadow-xl z-20 space-y-2 animate-slide-up">
                  {QUICK_REPLIES.map((reply, index) => (
                     <button
                         key={index}
                         onClick={() => onSend(reply)}
-                        className="w-full text-left bg-slate-50 text-slate-800 p-3 rounded-lg hover:bg-slate-100 transition-colors text-sm border border-slate-100"
+                        className="w-full text-left bg-gray-50 text-slate-800 p-3 rounded-lg hover:bg-gray-100 transition-colors text-sm border border-gray-200"
                     >
                         {reply}
                     </button>
                 ))}
-                <div className="border-t border-slate-200 pt-2">
+                <div className="border-t border-gray-200 pt-2">
                      <button
                         onClick={onOpenChat}
                         className="w-full text-center bg-blue-50 text-blue-600 p-2 rounded-lg hover:bg-blue-100 transition-colors text-sm font-semibold"
@@ -113,13 +113,12 @@ const App: React.FC = () => {
   const [firestoreError, setFirestoreError] = useState<string | null>(null);
   
   const [tripHistory, setTripHistory] = useState<Trip[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [balance, setBalance] = useState(0);
 
   const [onTripUIVisible, setOnTripUIVisible] = useState(true);
   const [viewingTripSummary, setViewingTripSummary] = useState<Trip | null>(null);
 
-  // New features state
-  const [destinationFilter, setDestinationFilter] = useState<{ address: string; location: LatLngLiteral } | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [showSOSConfirm, setShowSOSConfirm] = useState(false);
   const [showQuickReplies, setShowQuickReplies] = useState(false);
@@ -149,6 +148,7 @@ const App: React.FC = () => {
         setDriverId(null);
         setIsOnline(false);
         setTripHistory([]);
+        setTransactions([]);
         setActiveTrip(null);
         setTripStage(null);
         setIsDataLoaded(false);
@@ -163,26 +163,40 @@ const App: React.FC = () => {
                 const driverProfileRef = ref(db, `drivers/${currentDriverId}`);
                 const profileSnap = await get(driverProfileRef);
                 if (!profileSnap.exists()) {
-                     console.error("Driver profile does not exist in DB. This should not happen with admin-created accounts.");
-                     const name = currentUser.email?.split('@')[0] || "Driver";
-                     await set(driverProfileRef, {
-                        name: name, isOnline: false, isAvailable: false, createdAt: serverTimestamp()
-                    });
+                     // Check if admin deleted the driver while they were logged in or if it's a new setup
+                     // For safety, force logout if profile doesn't exist (means they were banned/removed)
+                     console.error("Driver profile not found. Logging out.");
+                     await auth.signOut();
+                     return;
                 }
 
-                // 1. Listen for Profile changes (isOnline)
+                // 1. Listen for Profile changes (isOnline and Existence)
                 const driverRef = ref(db, `drivers/${currentDriverId}`);
                 const profileListener = onValue(driverRef, (snapshot) => {
-                    if (snapshot.exists()) setIsOnline(snapshot.val().isOnline || false);
+                    if (snapshot.exists()) {
+                        setIsOnline(snapshot.val().isOnline || false);
+                    } else {
+                        // Driver was deleted from DB while logged in
+                        auth.signOut();
+                    }
                 });
                 dataListeners.push(() => off(driverRef, 'value', profileListener));
 
-                // 2. Listen for Completed Trips (tripHistory)
+                // 2. Listen for Completed Trips (tripHistory) & Auto Delete Old Trips
                 const completedTripsRef = ref(db, `completedTrips/${currentDriverId}`);
                 const historyListener = onValue(completedTripsRef, (snapshot) => {
                     if (snapshot.exists()) {
                         const tripsData = snapshot.val();
                         const tripsArray = Object.values(tripsData) as Trip[];
+                        
+                        // AUTO DELETE LOGIC: Remove trips older than 2 days
+                        const twoDaysAgo = Date.now() - (2 * 24 * 60 * 60 * 1000);
+                        tripsArray.forEach(trip => {
+                             if (trip.completedAt && trip.completedAt < twoDaysAgo) {
+                                 remove(ref(db, `completedTrips/${currentDriverId}/${trip.id}`));
+                             }
+                        });
+
                         setTripHistory(tripsArray.sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0)));
                     } else {
                         setTripHistory([]);
@@ -190,7 +204,20 @@ const App: React.FC = () => {
                 });
                 dataListeners.push(() => off(completedTripsRef, 'value', historyListener));
 
-                // 3. Check for active trip
+                // 3. Listen for Transactions (Top-ups)
+                const transactionsRef = ref(db, `transactions/${currentDriverId}`);
+                const txListener = onValue(transactionsRef, (snapshot) => {
+                    if (snapshot.exists()) {
+                         const txData = snapshot.val();
+                         const txArray = Object.keys(txData).map(key => ({ id: key, ...txData[key] }));
+                         setTransactions(txArray.sort((a,b) => b.date - a.date));
+                    } else {
+                        setTransactions([]);
+                    }
+                });
+                dataListeners.push(() => off(transactionsRef, 'value', txListener));
+
+                // 4. Check for active trip
                 const activeTripQuery = dbQuery(ref(db, 'trips'), orderByChild('driverId'), equalTo(currentDriverId));
                 const tripSnapshot = await get(activeTripQuery);
 
@@ -235,13 +262,31 @@ const App: React.FC = () => {
 }, []);
 
   useEffect(() => {
-    // Update balance from trip history
-    const newBalance = tripHistory.reduce((acc, trip) => {
-        const driverGets = trip.fare - 100 - Math.round((trip.fare - 100) * 0.14);
-        return acc + driverGets;
-    }, 0); // Starting balance is 0 for a real app
-    setBalance(newBalance);
-  }, [tripHistory]);
+    // Calculate Balance: 
+    // (+) Approved Topups
+    // (-) Trip Deductions (Platform Fee + Commission)
+    // (-) Withdrawals (if any, though prompt implies top-up based balance mainly)
+    
+    let currentBalance = 0;
+
+    // Add Approved Topups
+    transactions.forEach(tx => {
+        if (tx.type === 'topup' && tx.status === 'approved') {
+            currentBalance += tx.amount;
+        } else if (tx.type === 'withdraw') {
+             currentBalance -= tx.amount;
+        }
+    });
+
+    // Subtract Trip Deductions
+    tripHistory.forEach(trip => {
+        // Deduction = Platform Fee (100) + 14% of (Fare - 100)
+        const deduction = 100 + Math.round((trip.fare - 100) * 0.14);
+        currentBalance -= deduction;
+    });
+
+    setBalance(currentBalance);
+  }, [tripHistory, transactions]);
 
 
   useEffect(() => {
@@ -249,7 +294,7 @@ const App: React.FC = () => {
     tripRequestAudioRef.current = new Audio("data:audio/wav;base64,UklGRlFFT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YUFENQDI7PAA8gDwAPUA9ADzAPIBAAIEAwQDBAIBAAAAAP8A/gD4APUA8gDxAPIA8gDzAO8A7ADoAN4A2gDYANoA3gDkAO0A9AEAAv9//wD+APwA+gD7AP0AAQIDBAUGBwgJCgsMDQ4PDxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==");
   }, []);
 
-  // Listen for trip requests using onValue for robustness
+  // Listen for trip requests
   useEffect(() => {
     if (!isOnline || activeTrip || !driverId) {
       setTripRequests([]);
@@ -265,9 +310,7 @@ const App: React.FC = () => {
         const potentialTripsPromises = Object.entries(tripsData)
           .map(([id, data]) => ({ id, ...(data as any) }))
           .filter(trip => {
-             // If trip has a requestedDriverId, only that driver should see it
              if (trip.requestedDriverId && trip.requestedDriverId !== driverId) return false;
-             // If trip doesn't have requestedDriverId, anyone can see it (assuming no driverId assigned yet)
              return !trip.driverId;
           })
           .map(async (trip) => {
@@ -278,31 +321,20 @@ const App: React.FC = () => {
             if (!details.pickupLeg || !details.dropoffLeg) return null;
 
             const validTrip: Trip = { ...trip, ...details };
-
-            if (destinationFilter && !trip.requestedDriverId) {
-              const pickupToDriverDist = getHaversineDistance(
-                currentLocation,
-                validTrip.pickup
-              );
-              if (pickupToDriverDist > 5000) { // 5km filter
-                return null;
-              }
-            }
             return validTrip;
           });
         
         const resolvedTrips = (await Promise.all(potentialTripsPromises)).filter((t): t is Trip => t !== null);
         setTripRequests(resolvedTrips.sort((a,b) => b.fare - a.fare));
       } else {
-        setTripRequests([]); // No pending trips found
+        setTripRequests([]); 
       }
     }, (error) => {
       console.error("RTDB listener error:", error);
-      setFirestoreError(`Database error: ${error.message}. Check console for details.`);
     });
     
     return () => listener();
-  }, [isOnline, activeTrip, destinationFilter, driverId]);
+  }, [isOnline, activeTrip, driverId]);
 
 
   useEffect(() => {
@@ -311,12 +343,12 @@ const App: React.FC = () => {
         tripRequestAudioRef.current?.play().catch(e => console.warn("Audio autoplay failed.", e));
         hasPlayedSoundForCurrentRequests.current = true;
       } else if (tripRequests.length === 0) {
-        hasPlayedSoundForCurrentRequests.current = false; // Reset when requests are cleared
+        hasPlayedSoundForCurrentRequests.current = false; 
       }
     }
   }, [isOnline, activeTrip, tripRequests.length]);
 
-  // Listen for cancellation on the active trip
+  // Listen for cancellation
   useEffect(() => {
     if (!activeTrip || !activeTrip.id) return;
 
@@ -325,35 +357,23 @@ const App: React.FC = () => {
         if (snapshot.exists()) {
             const updatedTripData = snapshot.val() as Trip;
             if (updatedTripData.status === 'cancelled') {
-                console.log("Trip was cancelled by passenger.");
                 const cancellationFee = updatedTripData.cancellationFee || null;
-                
-                // Show a notification modal/alert
                 setCancellationAlert({ show: true, fee: cancellationFee });
-                
-                // Update balance if there's a fee
-                if (cancellationFee && cancellationFee > 0) {
-                    setBalance(prev => prev + cancellationFee);
-                }
             }
-        } else {
-             console.log("Active trip document was deleted, likely completed.");
         }
-    }, (error) => {
-        console.error("Error listening to active trip:", error);
     });
 
     return () => unsubscribe();
   }, [activeTrip]);
 
-  // Update driver location in Firebase
+  // Update driver location
   useEffect(() => {
     if (isOnline && location && driverId) {
       const driverLocationRef = ref(db, `driverLocations/${driverId}`);
       const locationData = {
         lat: location.lat,
         lng: location.lng,
-        heading: heading ?? 0, // Default heading to 0 if null
+        heading: heading ?? 0, 
         isAvailable: !activeTrip,
         timestamp: serverTimestamp()
       };
@@ -419,7 +439,6 @@ const App: React.FC = () => {
         setTripStage('at_pickup');
     } catch (e) {
         console.error("Failed to update trip status to at_pickup:", e);
-        alert("Could not update trip status. Please check your connection.");
     }
   };
 
@@ -431,7 +450,6 @@ const App: React.FC = () => {
         setTripStage('to_dropoff');
     } catch (e) {
         console.error("Failed to update trip status to to_dropoff:", e);
-        alert("Could not start trip. Please check your connection.");
     }
   };
 
@@ -439,15 +457,12 @@ const App: React.FC = () => {
     if (activeTrip && driverId) {
         const completedTrip = { ...activeTrip, completedAt: Date.now() };
         
-        // 1. Save to Driver's History
         const completedTripRef = ref(db, `completedTrips/${driverId}/${activeTrip.id}`);
         await set(completedTripRef, completedTrip);
 
-        // 2. Save to Passenger's History (So they can see it in their app)
         const passengerHistoryRef = ref(db, `passengers/${activeTrip.passengerId}/completedTrips/${activeTrip.id}`);
         await set(passengerHistoryRef, completedTrip);
 
-        // 3. Remove from Active Trips
         await remove(ref(db, `trips/${activeTrip.id}`));
         
         const driverRef = ref(db, `drivers/${driverId}`);
@@ -485,7 +500,7 @@ const App: React.FC = () => {
       setShowQuickReplies(false);
       setTimeout(() => {
           setLastSentMessage(null);
-      }, 3000); // Hide indicator after 3 seconds
+      }, 3000); 
   };
 
   const handleOpenFullChat = () => {
@@ -508,7 +523,7 @@ const App: React.FC = () => {
   if (!location) return <LoadingScreen />;
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-blue-50 text-slate-800">
+    <div className="relative h-screen w-screen overflow-hidden bg-blue-50 text-slate-800 font-sans">
       <MapComponent ref={mapRef} userLocation={location} userHeading={heading} activeTrip={activeTrip} tripStage={tripStage} />
       
       {activeTrip && tripStage && !viewingTripSummary ? (
@@ -539,7 +554,7 @@ const App: React.FC = () => {
           onGoOffline={handleGoOffline}
         />
       }
-      {showEarnings && <EarningsModal onClose={() => setShowEarnings(false)} balance={balance} tripHistory={tripHistory} onViewTripDetails={handleViewTripDetails} />}
+      {showEarnings && driverId && <EarningsModal driverId={driverId} onClose={() => setShowEarnings(false)} balance={balance} tripHistory={tripHistory} transactions={transactions} onViewTripDetails={handleViewTripDetails} />}
       {viewingTripSummary && <TripSummaryModal trip={viewingTripSummary} onClose={handleCloseTripSummary} />}
       {isChatOpen && activeTrip && <ChatModal tripId={activeTrip.id} onClose={() => setIsChatOpen(false)} />}
       {cancellationAlert.show && <CancellationAlertModal fee={cancellationAlert.fee} onClose={handleCloseCancellationAlert} />}
@@ -551,18 +566,14 @@ const App: React.FC = () => {
       {!activeTrip && !viewingTripSummary && (
         <div className="absolute bottom-0 left-0 right-0 p-4 flex flex-col items-center space-y-2 pointer-events-none">
             <div className="w-full max-w-md pointer-events-auto">
-                 {isOnline && <DestinationInput onDestinationSet={setDestinationFilter} />}
-                 <div className="h-2"></div>
-                {isOnline && tripRequests.length === 0 && (
-                    <p className="text-blue-800 bg-white/90 border border-blue-200 px-3 py-1 rounded-full text-sm mb-2 shadow-md text-center font-medium">ခရီးစဉ်များ ရှာဖွေနေသည်...</p>
-                )}
+                {/* Destination Input & Searching Text REMOVED as requested */}
                 {isOnline ? (
-                    <button onClick={handleGoOffline} className="w-full bg-red-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-red-500 transition-all duration-300">
-                        အော့ဖ်လိုင်းသို့ သွားပါ
+                    <button onClick={handleGoOffline} className="w-full bg-red-600 text-white font-bold py-4 px-8 rounded-full shadow-lg hover:bg-red-500 transition-all duration-300">
+                        အော့ဖ်လိုင်း (Go Offline)
                     </button>
                 ) : (
-                    <button onClick={handleGoOnline} className="w-full bg-emerald-600 text-white font-bold py-4 px-8 rounded-full shadow-lg hover:bg-emerald-500 transition-all duration-300 transform hover:scale-105">
-                        အွန်လိုင်းသို့ သွားပါ
+                    <button onClick={handleGoOnline} className="w-full bg-green-600 text-white font-bold py-4 px-8 rounded-full shadow-lg hover:bg-green-500 transition-all duration-300 transform hover:scale-105">
+                        အွန်လိုင်း (Go Online)
                     </button>
                 )}
             </div>
@@ -574,23 +585,23 @@ const App: React.FC = () => {
               <SOSButton onClick={() => setShowSOSConfirm(true)} />
               <button
                   onClick={() => mapRef.current?.recenter()}
-                  className="bg-white p-3 rounded-full shadow-lg border border-slate-200 hover:bg-slate-50"
+                  className="bg-white p-3 rounded-full shadow-lg border border-gray-200 hover:bg-gray-100"
                   aria-label="Recenter map"
               >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="#3b82f6" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-blue-600"><path d="M12 8V4H8" stroke="none"/><path d="M12 20v-4h4" stroke="none"/><path d="M4 12H8v4" stroke="none"/><path d="M20 12h-4V8" stroke="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><circle cx="12" cy="12" r="3" stroke="none"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#39FF14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-blue-500"><path d="M12 8V4H8" stroke="none"/><path d="M12 20v-4h4" stroke="none"/><path d="M4 12H8v4" stroke="none"/><path d="M20 12h-4V8" stroke="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><circle cx="12" cy="12" r="3" stroke="none"/></svg>
               </button>
           </div>
       )}
 
-      {firestoreError && <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-yellow-100 border border-yellow-300 text-yellow-800 p-4 rounded-md z-20 shadow-md">{firestoreError}</div>}
-      {locationError && <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-red-100 border border-red-300 text-red-800 p-2 rounded-md z-20 shadow-md">{locationError}</div>}
+      {firestoreError && <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-yellow-100 text-yellow-800 border border-yellow-300 p-4 rounded-md z-20">{firestoreError}</div>}
+      {locationError && <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-red-100 text-red-800 border border-red-300 p-2 rounded-md z-20">{locationError}</div>}
     </div>
   );
 };
 
 const SOSButton: React.FC<{onClick: () => void}> = ({onClick}) => (
-    <button onClick={onClick} className="bg-red-600 text-white p-3 rounded-full shadow-lg z-10 border border-red-700 hover:bg-red-500 transition-all animate-pulse">
-        <SOSIcon className="h-6 w-6" />
+    <button onClick={onClick} className="bg-red-600 p-3 rounded-full shadow-lg z-10 border border-red-400 hover:bg-red-500 transition-all animate-pulse">
+        <SOSIcon className="h-6 w-6 text-white" />
     </button>
 )
 

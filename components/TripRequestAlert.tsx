@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Trip } from '../types';
 import { AlarmIcon } from './Icons';
@@ -23,50 +24,50 @@ const TripRequestAlert: React.FC<TripRequestAlertProps> = ({ trip, onAccept, onD
   const isDirectRequest = trip.requestedDriverId === auth.currentUser?.uid;
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
-      <div className={`bg-white border-2 ${isDirectRequest ? 'border-amber-400 shadow-amber-500/30' : 'border-blue-500 shadow-blue-500/30'} rounded-xl p-4 shadow-2xl`}>
-        <div className="flex justify-between items-center mb-3">
+    <div className="absolute bottom-0 left-0 right-0 p-4 z-20">
+      <div className={`bg-white border-2 ${isDirectRequest ? 'border-amber-400 shadow-amber-200' : 'border-blue-500 shadow-blue-200'} rounded-2xl p-5 shadow-2xl`}>
+        <div className="flex justify-between items-center mb-4">
             <div>
-                 <h2 className={`text-xl font-bold ${isDirectRequest ? 'text-amber-600' : 'text-blue-800'}`}>
-                    {isDirectRequest ? 'သီးသန့်ငှားရမ်းခြင်း (Direct Booking)' : 'ခရီးစဉ် တောင်းဆိုမှုအသစ်'}
+                 <h2 className={`text-xl font-extrabold ${isDirectRequest ? 'text-amber-500' : 'text-blue-600'}`}>
+                    {isDirectRequest ? 'Direct Booking!' : 'Trip Request'}
                  </h2>
-                 {isDirectRequest && <p className="text-xs text-slate-500">ခရီးသည်မှ သင့်ကို တိုက်ရိုက်ရွေးချယ်ထားပါသည်</p>}
+                 {isDirectRequest && <p className="text-xs text-slate-500">Passenger chose you directly</p>}
             </div>
-          <button className={`${isDirectRequest ? 'text-amber-500' : 'text-blue-600'} animate-ping`}>
+          <div className={`${isDirectRequest ? 'bg-amber-100 text-amber-500' : 'bg-blue-100 text-blue-500'} p-2 rounded-full animate-pulse`}>
             <AlarmIcon className="h-6 w-6" />
-          </button>
-        </div>
-
-        <div className="space-y-2 text-sm">
-          <div className="bg-slate-50 p-3 rounded-md border border-slate-200">
-            <p className="text-slate-500 text-xs uppercase font-bold">ခေါ်ရန် (ခရီးသည်ဆီသို့)</p>
-            <p className="font-bold text-slate-900 text-lg">{getCleanAddress(trip.pickupAddress)}</p>
-            <p className="text-blue-600 font-semibold">{trip.pickupLeg.distance} အကွာ، ~{trip.pickupLeg.duration}</p>
-          </div>
-          <div className="bg-slate-50 p-3 rounded-md border border-slate-200">
-            <p className="text-slate-500 text-xs uppercase font-bold">ပို့ရန် (ခရီးစဉ်)</p>
-            <p className="font-bold text-slate-900 text-lg">{getCleanAddress(trip.dropoffAddress)}</p>
-            <p className="text-blue-600 font-semibold">{trip.dropoffLeg.distance}, ~{trip.dropoffLeg.duration}</p>
           </div>
         </div>
 
-        <div className="text-center my-4 bg-emerald-50 rounded-lg p-2 border border-emerald-100">
-          <p className="text-3xl font-extrabold text-emerald-600">{trip.fare.toLocaleString()} MMK</p>
-          <p className="text-xs text-emerald-800 font-semibold">ခန့်မှန်း ခရီးစဉ်ခ</p>
+        <div className="space-y-3 text-sm mb-4">
+          <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+            <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Pick Up</p>
+            <p className="font-bold text-slate-800 text-base">{getCleanAddress(trip.pickupAddress)}</p>
+            <p className="text-blue-500 font-medium mt-1">{trip.pickupLeg.distance} away • {trip.pickupLeg.duration}</p>
+          </div>
+          <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+            <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Drop Off</p>
+            <p className="font-bold text-slate-800 text-base">{getCleanAddress(trip.dropoffAddress)}</p>
+            <p className="text-slate-500 font-medium mt-1">{trip.dropoffLeg.distance} • {trip.dropoffLeg.duration}</p>
+          </div>
         </div>
 
-        <div className="flex space-x-2">
+        <div className="text-center mb-5 bg-green-50 p-2 rounded-lg border border-green-100">
+          <p className="text-3xl font-extrabold text-green-600">{trip.fare.toLocaleString()} Ks</p>
+          <p className="text-xs text-green-700 font-medium">Estimated Fare</p>
+        </div>
+
+        <div className="flex space-x-3">
           <button
             onClick={handleDeclineClick}
-            className="w-full bg-white border-2 border-red-500 text-red-600 font-bold py-3 px-4 rounded-lg hover:bg-red-50 transition-colors"
+            className="flex-1 bg-white text-red-500 border border-red-200 font-bold py-3 px-4 rounded-xl hover:bg-red-50 transition-colors"
           >
-            ငြင်းပယ်ပါ
+            Decline
           </button>
           <button
             onClick={handleAcceptClick}
-            className={`w-full ${isDirectRequest ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white'} font-bold py-3 px-4 rounded-lg transition-colors flex justify-center items-center shadow-md`}
+            className={`flex-[2] ${isDirectRequest ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-600 hover:bg-green-700'} text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-lg`}
           >
-            လက်ခံပါ
+            Accept Trip
           </button>
         </div>
       </div>

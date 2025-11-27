@@ -1,27 +1,28 @@
+
 import React from 'react';
 
 const LoadingScreen: React.FC = () => {
   return (
-    <div className="flex flex-col items-center justify-center h-screen w-screen bg-blue-50 text-blue-600">
+    <div className="flex flex-col items-center justify-center h-screen w-screen bg-blue-50 text-slate-800">
       <style>{`
         @keyframes pulse-light {
           0%, 100% {
             opacity: 1;
-            text-shadow: 0 0 5px #3b82f6, 0 0 10px #3b82f6;
+            transform: scale(1);
           }
           50% {
             opacity: 0.7;
-            text-shadow: 0 0 10px #3b82f6, 0 0 20px #3b82f6;
+            transform: scale(1.05);
           }
         }
-        .animate-pulse-light {
+        .animate-pulse-logo {
           animation: pulse-light 2s ease-in-out infinite;
         }
       `}</style>
-      <div className="text-4xl md:text-6xl font-extrabold tracking-widest animate-pulse-light text-blue-600">
+      <div className="text-5xl md:text-7xl font-extrabold tracking-widest animate-pulse-logo text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500 mb-4">
         Pyapay
       </div>
-      <p className="mt-4 text-lg animate-pulse text-slate-600">ကြိုဆိုပါတယ်</p>
+      <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
     </div>
   );
 };

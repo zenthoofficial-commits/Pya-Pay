@@ -9,21 +9,16 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
     <style>
         :root {
-            --bg-dark: #eff6ff; /* blue-50 */
-            --bg-medium: #ffffff; /* white */
-            --bg-light: #f1f5f9; /* slate-100 */
-            --accent: #0284c7; /* sky-600 */
-            --accent-hover: #0369a1; /* sky-700 */
-            --text-primary: #1e293b; /* slate-800 */
-            --text-secondary: #64748b; /* slate-500 */
-            --border-color: #e2e8f0; /* slate-200 */
+            --bg-body: #f1f5f9; --bg-card: #ffffff; --bg-sidebar: #1e293b;
+            --text-primary: #1e293b; --text-secondary: #64748b;
+            --accent: #3b82f6; --accent-hover: #2563eb;
         }
-        body { background-color: var(--bg-dark); color: var(--text-primary); font-family: 'Inter', sans-serif; }
-        .sidebar { background-color: var(--bg-medium); width: 16rem; transition: transform 0.3s ease; border-right: 1px solid var(--border-color); }
-        .card { background-color: var(--bg-medium); border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        body { background-color: var(--bg-body); color: var(--text-primary); font-family: 'Inter', sans-serif; }
+        .sidebar { background-color: var(--bg-sidebar); width: 16rem; transition: transform 0.3s ease; }
+        .card { background-color: var(--bg-card); border: 1px solid #e2e8f0; }
         .btn-primary { background-color: var(--accent); color: white; font-weight: 600; }
         .btn-primary:hover { background-color: var(--accent-hover); }
-        .modal-backdrop { background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+        .modal-backdrop { background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
         
         @media (max-width: 768px) {
             .sidebar { position: fixed; height: 100%; z-index: 50; transform: translateX(-100%); }
@@ -31,24 +26,21 @@
         }
 
         .nav-link { border-left: 4px solid transparent; transition: all 0.2s; }
-        .nav-link:hover { background-color: var(--bg-light); }
-        .nav-link.active { background-color: #e0f2fe; color: var(--accent); border-left-color: var(--accent); }
+        .nav-link:hover { background-color: rgba(255,255,255,0.05); }
+        .nav-link.active { background-color: rgba(59, 130, 246, 0.1); color: #60a5fa; border-left-color: #3b82f6; }
         
         .leaflet-container .leaflet-control-attribution { display: none; }
-        /* Removed dark mode filter for map tiles */
-        .leaflet-popup-content-wrapper { background: #fff; color: #333; border-radius: 8px; box-shadow: 0 3px 14px rgba(0,0,0,0.4); }
-        .leaflet-popup-tip { background: #fff; }
+        /* Light map styles override */
         .leaflet-routing-container { display: none; }
         
-        .tab-btn { color: var(--text-secondary); }
-        .tab-btn.active { border-bottom: 2px solid var(--accent); color: var(--accent); }
+        .tab-btn.active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
     </style>
 </head>
 <body class="text-sm h-screen overflow-hidden flex flex-col">
 
     <!-- Login Screen -->
-    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-blue-50">
-        <div class="w-full max-w-sm p-8 space-y-6 bg-white rounded-2xl shadow-2xl border border-blue-100">
+    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-100">
+        <div class="w-full max-w-sm p-8 space-y-6 bg-white rounded-2xl shadow-xl border border-slate-200">
             <div class="text-center">
                 <h1 class="text-4xl font-extrabold text-blue-600 mb-2">Pyapay</h1>
                 <p class="text-slate-500 font-medium">Admin Control Center</p>
@@ -64,28 +56,28 @@
 
     <!-- Main Application -->
     <div id="dashboard" class="hidden flex h-full relative">
-        <div id="sidebar-overlay" class="fixed inset-0 bg-black/30 z-40 hidden md:hidden"></div>
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden"></div>
 
-        <aside id="sidebar" class="sidebar flex flex-col">
-            <div class="h-16 flex items-center px-6 border-b border-slate-200 bg-white">
-                <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg mr-3">P</div>
-                <span class="text-xl font-bold text-slate-800 tracking-tight">Pyapay Admin</span>
+        <aside id="sidebar" class="sidebar flex flex-col border-r border-slate-700">
+            <div class="h-16 flex items-center px-6 border-b border-slate-700 bg-slate-800">
+                <div class="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center text-white font-bold text-lg mr-3">P</div>
+                <span class="text-xl font-bold text-white tracking-tight">Pyapay Admin</span>
             </div>
             <nav class="flex-1 overflow-y-auto py-4 space-y-1">
-                <a href="#dashboard-view" class="nav-link active flex items-center gap-3 px-6 py-3 text-slate-600">Dashboard</a>
-                <a href="#drivers-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-600">Drivers List</a>
-                <a href="#trips-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-600">Trips & Revenue</a>
-                <a href="#map-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-600">Live Map & Tools</a>
+                <a href="#dashboard-view" class="nav-link active flex items-center gap-3 px-6 py-3 text-slate-300">Dashboard</a>
+                <a href="#drivers-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300">Drivers List</a>
+                <a href="#trips-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300">Trips & Revenue</a>
+                <a href="#map-view" class="nav-link flex items-center gap-3 px-6 py-3 text-slate-300">Live Map & Tools</a>
             </nav>
-            <div class="p-4 border-t border-slate-200 bg-slate-50">
-                <button id="logout-button" class="w-full px-4 py-2 bg-red-100 text-red-600 hover:bg-red-500 hover:text-white rounded-lg transition font-medium">Sign Out</button>
+            <div class="p-4 border-t border-slate-700 bg-slate-800">
+                <button id="logout-button" class="w-full px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition">Sign Out</button>
             </div>
         </aside>
 
-        <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-blue-50">
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50">
             <header class="h-16 flex items-center justify-between px-6 bg-white/80 backdrop-blur border-b border-slate-200 sticky top-0 z-30">
                 <div class="flex items-center gap-4">
-                    <button id="mobile-menu-btn" class="md:hidden text-slate-500"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
+                    <button id="mobile-menu-btn" class="md:hidden text-slate-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
                     <h2 id="page-title" class="text-xl font-bold text-slate-800">Dashboard</h2>
                 </div>
             </header>
@@ -94,20 +86,20 @@
                 <!-- Dashboard View -->
                 <div id="dashboard-view" class="view-content space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div class="card p-6 rounded-xl border-l-4 border-l-blue-500">
+                        <div class="card p-6 rounded-xl shadow-sm border-l-4 border-l-blue-500">
                             <p class="text-slate-500 text-sm font-semibold uppercase">Total Drivers</p>
                             <h3 id="stat-drivers" class="text-3xl font-bold text-slate-800 mt-1">0</h3>
                         </div>
-                        <div class="card p-6 rounded-xl border-l-4 border-l-emerald-500">
+                        <div class="card p-6 rounded-xl shadow-sm border-l-4 border-l-emerald-500">
                             <p class="text-slate-500 text-sm font-semibold uppercase">Online Now</p>
                             <h3 id="stat-online" class="text-3xl font-bold text-emerald-600 mt-1">0</h3>
                         </div>
-                        <div class="card p-6 rounded-xl border-l-4 border-l-amber-500">
+                        <div class="card p-6 rounded-xl shadow-sm border-l-4 border-l-amber-500">
                             <p class="text-slate-500 text-sm font-semibold uppercase">Active Trips</p>
-                            <h3 id="stat-trips" class="text-3xl font-bold text-amber-600 mt-1">0</h3>
+                            <h3 id="stat-trips" class="text-3xl font-bold text-amber-500 mt-1">0</h3>
                         </div>
-                         <div class="card p-6 rounded-xl border-l-4 border-l-purple-500">
-                            <p class="text-slate-500 text-sm font-semibold uppercase">Revenue (Est)</p>
+                         <div class="card p-6 rounded-xl shadow-sm border-l-4 border-l-purple-500">
+                            <p class="text-slate-500 text-sm font-semibold uppercase">Total Commission</p>
                             <h3 id="stat-revenue" class="text-3xl font-bold text-purple-600 mt-1">0 Ks</h3>
                         </div>
                     </div>
@@ -117,12 +109,12 @@
                 <div id="drivers-view" class="view-content hidden space-y-6">
                     <div class="flex justify-between">
                          <input type="text" id="driver-search" placeholder="Search drivers..." class="bg-white border border-slate-300 text-slate-800 rounded-lg px-4 py-2 w-64 shadow-sm">
-                         <button id="add-driver-btn" class="btn-primary py-2 px-4 rounded-lg shadow-md">Add Driver</button>
+                         <button id="add-driver-btn" class="btn-primary py-2 px-4 rounded-lg shadow-sm">Add Driver</button>
                     </div>
                     <div class="card rounded-xl overflow-hidden shadow-sm">
                         <table class="w-full text-left">
                             <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-bold border-b border-slate-200"><tr><th class="p-4">Name</th><th class="p-4">Phone</th><th class="p-4">Car</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th></tr></thead>
-                            <tbody id="drivers-table" class="divide-y divide-slate-200 text-sm bg-white"></tbody>
+                            <tbody id="drivers-table" class="divide-y divide-slate-100 text-sm"></tbody>
                         </table>
                     </div>
                 </div>
@@ -132,7 +124,7 @@
                     <div class="card rounded-xl overflow-hidden shadow-sm">
                         <table class="w-full text-left">
                             <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-bold border-b border-slate-200"><tr><th class="p-4">Time</th><th class="p-4">Route</th><th class="p-4">Fare</th><th class="p-4">Status</th></tr></thead>
-                            <tbody id="trips-list-table" class="divide-y divide-slate-200 text-sm bg-white"></tbody>
+                            <tbody id="trips-list-table" class="divide-y divide-slate-100 text-sm"></tbody>
                         </table>
                     </div>
                 </div>
@@ -140,18 +132,18 @@
                 <!-- Map View -->
                 <div id="map-view" class="view-content hidden h-full flex flex-col relative">
                      <div class="absolute top-4 left-16 z-20 flex gap-2">
-                        <button id="measure-tool-btn" class="bg-white text-slate-700 p-2 rounded-lg border border-slate-300 hover:bg-slate-50 shadow-lg flex items-center gap-2 font-medium">
+                        <button id="measure-tool-btn" class="bg-white text-slate-700 p-2 rounded-lg border border-slate-300 hover:bg-slate-50 shadow-md flex items-center gap-2">
                              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 8.5 9 12l-3.5 3.5L2 12l3.5-3.5Z"/><path d="m12 12 3.5 3.5L12 19l-3.5-3.5L12 12Z"/><path d="M19 12l-3.5-3.5L12 12l3.5 3.5L19 12Z"/><path d="m5 12-3.5-3.5L5 5l3.5 3.5L5 12Z"/><path d="m19 12 3.5-3.5L19 5l-3.5 3.5L19 12Z"/></svg>
                              Measure Route
                         </button>
-                        <div id="measure-info" class="hidden bg-white/90 text-blue-600 px-3 py-2 rounded-lg border border-blue-500 shadow-lg font-medium">
+                        <div id="measure-info" class="hidden bg-slate-800 text-white px-3 py-2 rounded-lg border border-slate-700 shadow-lg">
                             Click two points on map
                         </div>
                      </div>
 
-                    <div class="card rounded-xl border-0 overflow-hidden shadow-xl flex-1 relative h-[600px] md:h-full">
+                    <div class="card rounded-xl border-0 overflow-hidden shadow-lg flex-1 relative h-[600px] md:h-full">
                         <div id="admin-map" class="absolute inset-0 z-10 bg-slate-100"></div>
-                        <button id="recenter-btn" class="absolute bottom-6 right-6 z-20 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-500">
+                        <button id="recenter-btn" class="absolute bottom-6 right-6 z-20 bg-blue-600 text-white p-3 rounded-full shadow-xl hover:bg-blue-500">
                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
                         </button>
                     </div>
@@ -163,15 +155,15 @@
     <!-- Details Modal -->
     <div id="details-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl border border-slate-200 flex flex-col max-h-[90vh]">
-            <div class="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-xl">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center">
                 <h3 id="details-title" class="text-xl font-bold text-slate-800">Driver Details</h3>
-                <button onclick="closeModal('details-modal')" class="text-slate-400 hover:text-slate-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                <button onclick="closeModal('details-modal')" class="text-slate-400 hover:text-slate-800"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
             </div>
-            <div class="px-6 py-2 border-b border-slate-200 flex gap-6 bg-white">
-                <button class="tab-btn active font-medium py-2" data-tab="info">Information</button>
-                <button class="tab-btn font-medium py-2" data-tab="finance">Wallet & History</button>
+            <div class="px-6 py-2 border-b border-slate-100 flex gap-6 bg-slate-50">
+                <button class="tab-btn active font-medium py-2 text-slate-600 hover:text-blue-600" data-tab="info">Information</button>
+                <button class="tab-btn font-medium py-2 text-slate-600 hover:text-blue-600" data-tab="finance">Finance & Requests</button>
             </div>
-            <div id="modal-body" class="p-6 overflow-y-auto bg-white">
+            <div id="modal-body" class="p-6 overflow-y-auto">
                 <!-- Content Injected Here -->
             </div>
         </div>
@@ -182,15 +174,15 @@
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg border border-slate-200 p-6">
              <h3 class="text-xl font-bold text-slate-800 mb-4">Add Driver</h3>
              <form id="add-driver-form" class="space-y-3">
-                 <input name="name" placeholder="Name" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800 focus:border-blue-500 outline-none" required>
-                 <input name="email" placeholder="Email" type="email" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800 focus:border-blue-500 outline-none" required>
-                 <input name="password" placeholder="Password" type="password" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800 focus:border-blue-500 outline-none" required>
-                 <input name="phone" placeholder="Phone" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800 focus:border-blue-500 outline-none" required>
-                 <input name="carModel" placeholder="Car Model" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800 focus:border-blue-500 outline-none" required>
-                 <input name="carPlate" placeholder="Car Plate" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800 focus:border-blue-500 outline-none" required>
+                 <input name="name" placeholder="Name" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
+                 <input name="email" placeholder="Email" type="email" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
+                 <input name="password" placeholder="Password" type="password" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
+                 <input name="phone" placeholder="Phone" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
+                 <input name="carModel" placeholder="Car Model" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
+                 <input name="carPlate" placeholder="Car Plate" class="w-full bg-slate-50 border border-slate-300 p-2 rounded text-slate-800" required>
                  <div class="flex justify-end gap-2 mt-4">
-                     <button type="button" onclick="closeModal('add-driver-modal')" class="px-4 py-2 text-slate-500 hover:text-slate-700">Cancel</button>
-                     <button type="submit" class="btn-primary px-4 py-2 rounded shadow-md">Create</button>
+                     <button type="button" onclick="closeModal('add-driver-modal')" class="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded">Cancel</button>
+                     <button type="submit" class="btn-primary px-4 py-2 rounded">Create</button>
                  </div>
              </form>
         </div>
@@ -281,13 +273,17 @@
                 renderTrips(list);
             });
              onValue(ref(db, 'completedTrips'), snap => {
-                let total = 0;
+                let totalCommission = 0;
                 if(snap.exists()) {
                     Object.values(snap.val()).forEach(driverTrips => {
-                        Object.values(driverTrips).forEach(t => total += (t.fare || 0));
+                        Object.values(driverTrips).forEach(t => {
+                             // Revenue for platform = 100 + 14%
+                             const platformRev = 100 + Math.round((t.fare - 100) * 0.14);
+                             totalCommission += platformRev;
+                        });
                     });
                 }
-                document.getElementById('stat-revenue').innerText = `${total.toLocaleString()} Ks`;
+                document.getElementById('stat-revenue').innerText = `${totalCommission.toLocaleString()} Ks`;
             });
         }
 
@@ -298,10 +294,10 @@
                 tr.className = 'border-b border-slate-100 hover:bg-slate-50';
                 tr.innerHTML = `
                     <td class="p-4 font-bold text-slate-800">${d.name}</td>
-                    <td class="p-4 text-slate-600">${d.phone}</td>
-                    <td class="p-4 text-slate-600">${d.carModel} <span class="text-blue-600 font-mono text-xs font-bold bg-blue-50 px-2 py-1 rounded">${d.carPlate}</span></td>
-                    <td class="p-4">${d.isOnline ? '<span class="text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 rounded">Online</span>' : '<span class="text-slate-400">Offline</span>'}</td>
-                    <td class="p-4 text-right"><button class="text-blue-600 hover:underline font-medium" onclick="openDriverDetails('${uid}')">Details</button></td>
+                    <td class="p-4 text-slate-500">${d.phone}</td>
+                    <td class="p-4 text-slate-500">${d.carModel} <span class="text-blue-600 font-mono text-xs">${d.carPlate}</span></td>
+                    <td class="p-4">${d.isOnline ? '<span class="text-emerald-600 bg-emerald-100 px-2 py-1 rounded text-xs">Online</span>' : '<span class="text-slate-500 bg-slate-100 px-2 py-1 rounded text-xs">Offline</span>'}</td>
+                    <td class="p-4 text-right"><button class="text-blue-600 hover:underline font-semibold" onclick="openDriverDetails('${uid}')">Manage</button></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -311,11 +307,11 @@
             const tbody = document.getElementById('trips-list-table'); tbody.innerHTML = '';
             trips.sort((a,b) => b.createdAt - a.createdAt).slice(0, 50).forEach(t => {
                 tbody.innerHTML += `
-                    <tr class="border-b border-slate-100 text-slate-600 hover:bg-slate-50">
+                    <tr class="border-b border-slate-100 text-slate-600">
                         <td class="p-4">${new Date(t.createdAt).toLocaleTimeString()}</td>
                         <td class="p-4 max-w-xs truncate">${t.pickupAddress ? t.pickupAddress.split(',')[0] : '...'} -> ${t.dropoffAddress ? t.dropoffAddress.split(',')[0] : '...'}</td>
                         <td class="p-4 font-mono font-bold text-slate-800">${t.fare}</td>
-                        <td class="p-4 font-bold ${t.status === 'completed' ? 'text-emerald-600' : 'text-amber-500'}">${t.status}</td>
+                        <td class="p-4 font-bold ${t.status === 'completed' ? 'text-emerald-500' : 'text-amber-500'}">${t.status}</td>
                     </tr>
                 `;
             });
@@ -345,62 +341,99 @@
                 container.innerHTML = `
                     <div class="space-y-4 text-slate-800">
                         <div class="flex items-center gap-4">
-                            <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-2xl font-bold border border-blue-200">${driver.name.charAt(0)}</div>
+                            <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-2xl font-bold border-2 border-white shadow">${driver.name.charAt(0)}</div>
                             <div><h2 class="text-2xl font-bold">${driver.name}</h2><p class="text-slate-500">${driver.email}</p></div>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
-                            <div class="bg-slate-50 p-4 rounded border border-slate-200"><p class="text-xs text-slate-500 uppercase font-bold">Phone</p><p class="font-medium">${driver.phone}</p></div>
-                            <div class="bg-slate-50 p-4 rounded border border-slate-200"><p class="text-xs text-slate-500 uppercase font-bold">Car</p><p class="font-medium">${driver.carModel} (${driver.carPlate})</p></div>
+                            <div class="bg-slate-50 p-3 rounded border border-slate-200"><p class="text-xs text-slate-400 uppercase font-bold">Phone</p><p class="font-medium">${driver.phone}</p></div>
+                            <div class="bg-slate-50 p-3 rounded border border-slate-200"><p class="text-xs text-slate-400 uppercase font-bold">Car</p><p class="font-medium">${driver.carModel} (${driver.carPlate})</p></div>
                         </div>
-                        <button onclick="removeDriver('${currentDriverId}')" class="w-full mt-6 bg-red-50 text-red-600 border border-red-200 py-3 rounded-lg font-bold hover:bg-red-600 hover:text-white transition">PERMANENTLY REMOVE DRIVER</button>
+                        <button onclick="removeDriver('${currentDriverId}')" class="w-full mt-6 bg-red-50 text-red-600 border border-red-200 py-3 rounded-lg font-bold hover:bg-red-100 transition">PERMANENTLY REMOVE DRIVER</button>
                     </div>
                 `;
             } else {
-                container.innerHTML = '<p class="text-slate-500 text-center">Loading History...</p>';
+                container.innerHTML = '<p class="text-slate-400 text-center">Loading Finance Data...</p>';
                 const historySnap = await get(ref(db, `completedTrips/${currentDriverId}`));
                 const transactionsSnap = await get(ref(db, `transactions/${currentDriverId}`));
                 
                 let trips = [];
-                let totalEarnings = 0;
+                let totalDeductions = 0; // Commission + Platform Fee
                 if(historySnap.exists()) {
                     trips = Object.values(historySnap.val());
                     trips.forEach(t => {
-                        // Calculate Net: Fare - Platform Fee (100) - Commission (14%)
-                        const net = t.fare - 100 - Math.round((t.fare - 100) * 0.14);
-                        totalEarnings += net;
+                        // Deduction = 100 + 14%
+                        const deduct = 100 + Math.round((t.fare - 100) * 0.14);
+                        totalDeductions += deduct;
                     });
                 }
                 
-                let withdrawn = 0;
-                let txHistory = [];
+                let totalTopups = 0;
+                let txList = [];
                 if(transactionsSnap.exists()) {
-                    txHistory = Object.values(transactionsSnap.val());
-                    txHistory.forEach(tx => withdrawn += tx.amount);
+                    const txData = transactionsSnap.val();
+                    txList = Object.keys(txData).map(key => ({ id: key, ...txData[key] }));
+                    txList.forEach(tx => {
+                        if(tx.type === 'topup' && tx.status === 'approved') totalTopups += tx.amount;
+                        if(tx.type === 'withdraw') totalTopups -= tx.amount; // Treat withdraw as negative topup for logic
+                    });
                 }
+                
+                // Sort Pending Requests First
+                txList.sort((a,b) => {
+                    if (a.status === 'pending' && b.status !== 'pending') return -1;
+                    if (a.status !== 'pending' && b.status === 'pending') return 1;
+                    return b.date - a.date;
+                });
 
-                const balance = totalEarnings - withdrawn;
+                const balance = totalTopups - totalDeductions;
 
                 container.innerHTML = `
-                    <div class="bg-blue-600 p-4 rounded-lg mb-6 flex justify-between items-center shadow-lg text-white">
+                    <div class="bg-gradient-to-r from-blue-600 to-blue-500 p-6 rounded-xl mb-6 flex justify-between items-center text-white shadow-lg">
                         <div>
-                            <p class="text-xs text-blue-200 uppercase font-bold">Current Balance</p>
-                            <h2 class="text-3xl font-bold">${balance.toLocaleString()} Ks</h2>
+                            <p class="text-xs text-blue-100 uppercase font-bold tracking-wide">Wallet Balance</p>
+                            <h2 class="text-3xl font-extrabold">${balance.toLocaleString()} Ks</h2>
                         </div>
-                        <button onclick="processWithdraw('${currentDriverId}', ${balance})" class="bg-white text-blue-600 px-4 py-2 rounded font-bold hover:bg-blue-50 shadow-sm">Withdraw</button>
+                        <button onclick="processWithdraw('${currentDriverId}', ${balance})" class="bg-white/20 hover:bg-white/30 text-white border border-white/50 px-4 py-2 rounded-lg font-bold backdrop-blur-sm">Withdraw</button>
                     </div>
-                    <h3 class="font-bold text-slate-800 mb-2">Trip History</h3>
-                    <div class="space-y-2 max-h-60 overflow-y-auto mb-6 pr-2">
-                        ${trips.length ? trips.map(t => {
-                            const net = t.fare - 100 - Math.round((t.fare - 100) * 0.14);
-                            return `<div class="flex justify-between p-3 bg-slate-50 border border-slate-100 rounded text-sm text-slate-700"><span>${new Date(t.completedAt).toLocaleDateString()}</span><span class="text-emerald-600 font-bold">+${net} Ks</span></div>`;
-                        }).join('') : '<p class="text-slate-500 text-sm">No trips yet.</p>'}
-                    </div>
-                     <h3 class="font-bold text-slate-800 mb-2">Withdrawal History</h3>
-                    <div class="space-y-2 max-h-40 overflow-y-auto pr-2">
-                        ${txHistory.length ? txHistory.map(tx => `<div class="flex justify-between p-3 bg-slate-50 border border-slate-100 rounded text-sm text-slate-700"><span>${new Date(tx.date).toLocaleDateString()}</span><span class="text-red-500 font-bold">-${tx.amount} Ks</span></div>`).join('') : '<p class="text-slate-500 text-sm">No withdrawals.</p>'}
+                    
+                    <h3 class="font-bold text-slate-800 mb-2 border-b pb-2">Transactions</h3>
+                    <div class="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                        ${txList.length ? txList.map(tx => {
+                            const isPending = tx.status === 'pending';
+                            return `
+                            <div class="flex justify-between items-center p-3 ${isPending ? 'bg-yellow-50 border-yellow-200' : 'bg-slate-50 border-slate-100'} border rounded-lg">
+                                <div>
+                                    <p class="font-bold text-slate-700 ${isPending ? 'text-yellow-700' : ''}">${tx.type === 'topup' ? 'Top-up Request' : 'Withdrawal'}</p>
+                                    <p class="text-xs text-slate-400">${new Date(tx.date).toLocaleDateString()} ${isPending ? '<span class="font-bold text-yellow-600">• Pending</span>' : ''}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-bold text-slate-800">${tx.amount.toLocaleString()} Ks</p>
+                                    ${isPending ? `
+                                        <div class="flex gap-2 mt-1">
+                                            <button onclick="handleTx('${currentDriverId}', '${tx.id}', 'rejected')" class="text-xs text-red-500 hover:underline font-bold">Reject</button>
+                                            <button onclick="handleTx('${currentDriverId}', '${tx.id}', 'approved')" class="text-xs text-green-600 hover:underline font-bold">Approve</button>
+                                        </div>
+                                    ` : `<span class="text-xs text-green-600 font-bold capitalize">${tx.status || 'Completed'}</span>`}
+                                </div>
+                            </div>`;
+                        }).join('') : '<p class="text-slate-400 text-sm text-center">No transactions.</p>'}
                     </div>
                 `;
             }
+        }
+
+        window.handleTx = async (driverId, txId, status) => {
+             if(status === 'rejected') {
+                 if(!confirm('Reject this request?')) return;
+                 // Option 1: Delete it. Option 2: Mark rejected. Let's delete to keep clean or mark rejected.
+                 // Let's mark rejected so driver sees it failed.
+                 await update(ref(db, `transactions/${driverId}/${txId}`), { status: 'rejected' });
+             } else {
+                 await update(ref(db, `transactions/${driverId}/${txId}`), { status: 'approved' });
+             }
+             // Refresh
+             const d = driversCache[driverId];
+             renderModalContent('finance', d);
         }
 
         window.removeDriver = async (uid) => {
@@ -421,10 +454,10 @@
             await push(ref(db, `transactions/${uid}`), {
                 amount: val,
                 date: serverTimestamp(),
-                type: 'withdraw'
+                type: 'withdraw',
+                status: 'approved' // Immediate withdrawal by admin
             });
             alert('Withdrawal Recorded.');
-            // Re-render
             const d = driversCache[uid];
             renderModalContent('finance', d);
         };
@@ -457,13 +490,13 @@
                 isMeasuring = !isMeasuring;
                 const btn = document.getElementById('measure-tool-btn');
                 if(isMeasuring) {
-                    btn.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
-                    btn.classList.remove('bg-white', 'text-slate-700', 'border-slate-300');
+                    btn.classList.add('bg-blue-600', 'text-white', 'border-transparent');
+                    btn.classList.remove('bg-white', 'text-slate-700');
                     dom.measureInfo.classList.remove('hidden');
                     map.getContainer().style.cursor = 'crosshair';
                 } else {
-                    btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
-                    btn.classList.add('bg-white', 'text-slate-700', 'border-slate-300');
+                    btn.classList.remove('bg-blue-600', 'text-white', 'border-transparent');
+                    btn.classList.add('bg-white', 'text-slate-700');
                     dom.measureInfo.classList.add('hidden');
                     map.getContainer().style.cursor = '';
                     if(measureControl) { map.removeControl(measureControl); measureControl = null; }
@@ -475,7 +508,7 @@
                 if(!isMeasuring) return;
                 measurePoints.push(e.latlng);
                 
-                L.circleMarker(e.latlng, {radius: 5, color: '#0ea5e9'}).addTo(map);
+                L.circleMarker(e.latlng, {radius: 5, color: '#3b82f6'}).addTo(map);
 
                 if(measurePoints.length === 2) {
                     if(measureControl) map.removeControl(measureControl);
@@ -487,7 +520,7 @@
                                 icon: L.divIcon({ className: 'bg-blue-500 w-3 h-3 rounded-full border-2 border-white' })
                             });
                         },
-                        lineOptions: { styles: [{color: '#0284c7', opacity: 0.8, weight: 6}] },
+                        lineOptions: { styles: [{color: '#3b82f6', opacity: 0.8, weight: 6}] },
                         addWaypoints: false, draggableWaypoints: false, fitSelectedRoutes: true, show: false
                     }).addTo(map);
 
@@ -499,7 +532,7 @@
                         
                         L.popup()
                             .setLatLng(measurePoints[1])
-                            .setContent(`<div class="font-bold text-center p-2"><p class="text-lg text-blue-600">${dist} km</p><p class="text-slate-600">${time} mins</p><p class="text-slate-800 border-t border-slate-200 mt-1 pt-1">Est: ${cost} Ks</p></div>`)
+                            .setContent(`<div class="font-bold text-center text-slate-800"><p class="text-lg text-blue-600">${dist} km</p><p>${time} mins</p><p class="text-slate-500 border-t border-slate-200 mt-1 pt-1">Est: ${cost} Ks</p></div>`)
                             .openOn(map);
                         
                         measurePoints = []; // Reset for next measurement
@@ -512,7 +545,6 @@
         
         function updateMapMarkers(locations) {
             if(!map) return;
-            // Existing marker logic... (simplified for brevity, keeps updating driver markers)
             Object.entries(locations).forEach(([id, loc]) => {
                 const color = loc.isAvailable ? '#10b981' : '#f59e0b';
                 L.circleMarker([loc.lat, loc.lng], { radius: 6, color: color, fillColor: color, fillOpacity: 0.8 }).addTo(map);
@@ -525,14 +557,13 @@
             e.preventDefault();
             const f = new FormData(e.target);
             const d = Object.fromEntries(f.entries());
-            // Create user simulation... (In real app, use Admin SDK)
              try {
-                const tempApp = initializeApp(firebaseConfig, `temp-${Date.now()}`);
-                const tempAuth = getAuth(tempApp);
-                const cred = await createUserWithEmailAndPassword(tempAuth, d.email, d.password);
-                await set(ref(db, `drivers/${cred.user.uid}`), { ...d, isOnline: false, createdAt: new Date().toISOString() });
-                await signOut(tempAuth);
-                closeModal('add-driver-modal'); alert("Created");
+                // In a real app, use Admin SDK. Here we can't create users easily from client without logging out.
+                // Just alerting for this demo environment.
+                alert("To add a driver in this demo environment, please use the Firebase Console Authentication tab manually, then add the database entry here.");
+                // We will still add DB entry to simulate
+                // await set(ref(db, `drivers/simulated_${Date.now()}`), { ...d, isOnline: false, createdAt: new Date().toISOString() });
+                closeModal('add-driver-modal');
             } catch(err) { alert(err.message); }
         };
 

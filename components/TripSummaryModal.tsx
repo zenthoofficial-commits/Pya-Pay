@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Trip } from '../types';
 
@@ -6,10 +7,10 @@ interface TripSummaryModalProps {
   onClose: () => void;
 }
 
-const FareRow: React.FC<{ label: string; amount: number; isSub?: boolean; isTotal?: boolean }> = ({ label, amount, isSub = false, isTotal = false }) => (
-    <div className={`flex justify-between items-center py-2 ${isSub ? 'pl-4 text-sm' : ''} ${isTotal ? 'font-bold text-lg border-t border-green-700 mt-2 pt-3' : ''}`}>
-        <p className={isSub ? 'text-gray-400' : 'text-green-300'}>{label}</p>
-        <p className={`${isTotal ? 'text-green-300' : 'text-white'}`}>{amount.toLocaleString()} MMK</p>
+const FareRow: React.FC<{ label: string; amount: number; isSub?: boolean; isTotal?: boolean; isDeduction?: boolean }> = ({ label, amount, isSub = false, isTotal = false, isDeduction = false }) => (
+    <div className={`flex justify-between items-center py-2 ${isSub ? 'pl-4 text-sm' : ''} ${isTotal ? 'font-bold text-lg border-t border-gray-200 mt-2 pt-3' : ''}`}>
+        <p className={isSub ? 'text-slate-500' : 'text-slate-800 font-medium'}>{label}</p>
+        <p className={`${isTotal ? 'text-blue-600' : (isDeduction ? 'text-red-500' : 'text-slate-800')}`}>{amount.toLocaleString()} Ks</p>
     </div>
 );
 
@@ -17,12 +18,12 @@ const TripSummaryModal: React.FC<TripSummaryModalProps> = ({ trip, onClose }) =>
     // Calculations based on user request
     const totalFare = trip.fare;
     const platformFee = 100;
-    const tripMoney = totalFare - platformFee;
-    const commission = Math.round(tripMoney * 0.14);
-    const driverGets = tripMoney - commission;
+    const commission = Math.round((totalFare - 100) * 0.14);
+    const totalDeduction = platformFee + commission;
+    const driverNet = totalFare - totalDeduction;
 
     return (
-        <div className="absolute inset-0 bg-black bg-opacity-80 z-20 flex justify-center items-center p-4 animate-fade-in">
+        <div className="absolute inset-0 bg-black/60 z-30 flex justify-center items-center p-4 backdrop-blur-sm animate-fade-in">
             <style>{`
                 @keyframes fade-in {
                     from { opacity: 0; transform: scale(0.95); }
@@ -32,37 +33,42 @@ const TripSummaryModal: React.FC<TripSummaryModalProps> = ({ trip, onClose }) =>
                     animation: fade-in 0.3s ease-out forwards;
                 }
             `}</style>
-            <div className="bg-gray-900 border border-green-500 rounded-xl w-full max-w-md p-6 text-green-300 shadow-lg shadow-green-500/30">
+            <div className="bg-white rounded-2xl w-full max-w-md p-6 text-slate-800 shadow-2xl">
                 <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-gray-800">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
                     </div>
-                    <h2 className="text-2xl font-bold">ခရီးစဉ် ပြီးဆုံးပါပြီ</h2>
-                    <p className="text-gray-400">ဝင်ငွေ အသေးစိတ်</p>
+                    <h2 className="text-2xl font-extrabold text-slate-800">Trip Completed!</h2>
+                    <p className="text-slate-500">Income Breakdown</p>
                 </div>
 
-                <div className="bg-gray-800 rounded-lg p-4 space-y-1">
-                    <FareRow label="စုစုပေါင်း ခရီးစဉ်ခ" amount={totalFare} />
+                <div className="bg-gray-50 rounded-xl p-4 space-y-1 border border-gray-100">
+                    <FareRow label="Total Fare (from Passenger)" amount={totalFare} />
                     
                     <div className="flex justify-end items-center py-1">
-                       <div className="border-t border-dashed border-gray-600 flex-grow ml-24"></div>
-                       <p className="text-xs text-gray-500 mx-2">Breakdown</p>
+                       <div className="border-t border-dashed border-gray-300 flex-grow ml-12"></div>
+                       <p className="text-xs text-slate-400 mx-2 uppercase font-bold">Deductions</p>
                     </div>
 
-                    <FareRow label="ခရီးစဉ်အတွက် ငွေသား" amount={tripMoney} isSub />
-                    <FareRow label="ပလက်ဖောင်း ဝန်ဆောင်မှုခ" amount={-platformFee} isSub />
-                    <FareRow label="ကော်မရှင် (14%)" amount={-commission} isSub />
+                    <FareRow label="Platform Fee" amount={-platformFee} isSub isDeduction />
+                    <FareRow label="Commission (14%)" amount={-commission} isSub isDeduction />
 
-                    <FareRow label="သင်ရရှိငွေ" amount={driverGets} isTotal />
+                    <div className="mt-4 pt-2 border-t border-gray-200">
+                         <div className="flex justify-between items-center">
+                            <p className="font-bold text-red-500">Total Deducted from Wallet</p>
+                            <p className="font-bold text-red-500">-{totalDeduction.toLocaleString()} Ks</p>
+                        </div>
+                         <p className="text-xs text-gray-400 mt-1 text-right">*(You keep the cash fare)*</p>
+                    </div>
                 </div>
                 
                 <button 
                     onClick={onClose}
-                    className="mt-8 w-full bg-green-600 text-black font-bold py-3 px-4 rounded-lg hover:bg-green-500 transition-colors"
+                    className="mt-6 w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30"
                 >
-                    ပြီးပြီ
+                    Close
                 </button>
             </div>
         </div>

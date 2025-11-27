@@ -32,7 +32,8 @@
       ".read": "auth != null",
       ".write": "root.child('admins/' + auth.uid).exists()",
       "$driverId": {
-        ".read": "auth != null && ($driverId === auth.uid || root.child('admins/' + auth.uid).exists())"
+        ".read": "auth != null && ($driverId === auth.uid || root.child('admins/' + auth.uid).exists())",
+        ".write": "auth != null && ($driverId === auth.uid || root.child('admins/' + auth.uid).exists())"
       }
     },
     "trips": {
