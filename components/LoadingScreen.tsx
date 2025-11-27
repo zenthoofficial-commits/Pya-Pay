@@ -3,7 +3,7 @@ import React from 'react';
 
 const LoadingScreen: React.FC = () => {
   return (
-    <div className="flex flex-col items-center justify-center h-screen w-screen bg-blue-50 text-slate-800">
+    <div className="flex flex-col items-center justify-center h-screen w-screen bg-blue-500 text-white">
       <style>{`
         @keyframes pulse-light {
           0%, 100% {
@@ -19,10 +19,11 @@ const LoadingScreen: React.FC = () => {
           animation: pulse-light 2s ease-in-out infinite;
         }
       `}</style>
-      <div className="text-5xl md:text-7xl font-extrabold tracking-widest animate-pulse-logo text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500 mb-4">
+      <div className="text-5xl md:text-7xl font-extrabold tracking-widest animate-pulse-logo mb-4 text-white">
         Pyapay
       </div>
-      <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+      <div className="w-12 h-12 border-4 border-blue-200 border-t-white rounded-full animate-spin"></div>
+      <p className="mt-4 text-blue-100 font-medium tracking-wider">Driver App</p>
     </div>
   );
 };

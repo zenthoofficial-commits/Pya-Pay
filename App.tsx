@@ -566,13 +566,12 @@ const App: React.FC = () => {
       {!activeTrip && !viewingTripSummary && (
         <div className="absolute bottom-0 left-0 right-0 p-4 flex flex-col items-center space-y-2 pointer-events-none">
             <div className="w-full max-w-md pointer-events-auto">
-                {/* Destination Input & Searching Text REMOVED as requested */}
                 {isOnline ? (
-                    <button onClick={handleGoOffline} className="w-full bg-red-600 text-white font-bold py-4 px-8 rounded-full shadow-lg hover:bg-red-500 transition-all duration-300">
+                    <button onClick={handleGoOffline} className="w-full bg-green-600 text-white font-bold py-4 px-8 rounded-full shadow-lg hover:bg-green-500 transition-all duration-300 transform hover:scale-105">
                         အော့ဖ်လိုင်း (Go Offline)
                     </button>
                 ) : (
-                    <button onClick={handleGoOnline} className="w-full bg-green-600 text-white font-bold py-4 px-8 rounded-full shadow-lg hover:bg-green-500 transition-all duration-300 transform hover:scale-105">
+                    <button onClick={handleGoOnline} className="w-full bg-red-600 text-white font-bold py-4 px-8 rounded-full shadow-lg hover:bg-red-500 transition-all duration-300">
                         အွန်လိုင်း (Go Online)
                     </button>
                 )}

@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -405,6 +406,7 @@
                                 <div>
                                     <p class="font-bold text-slate-700 ${isPending ? 'text-yellow-700' : ''}">${tx.type === 'topup' ? 'Top-up Request' : 'Withdrawal'}</p>
                                     <p class="text-xs text-slate-400">${new Date(tx.date).toLocaleDateString()} ${isPending ? '<span class="font-bold text-yellow-600">• Pending</span>' : ''}</p>
+                                    ${isPending ? `<p class="text-xs text-slate-500 font-mono mt-1">${tx.method} • ID: ${tx.txId} • Sender: ${tx.senderName}</p>` : ''}
                                 </div>
                                 <div class="text-right">
                                     <p class="font-bold text-slate-800">${tx.amount.toLocaleString()} Ks</p>
@@ -425,13 +427,10 @@
         window.handleTx = async (driverId, txId, status) => {
              if(status === 'rejected') {
                  if(!confirm('Reject this request?')) return;
-                 // Option 1: Delete it. Option 2: Mark rejected. Let's delete to keep clean or mark rejected.
-                 // Let's mark rejected so driver sees it failed.
                  await update(ref(db, `transactions/${driverId}/${txId}`), { status: 'rejected' });
              } else {
                  await update(ref(db, `transactions/${driverId}/${txId}`), { status: 'approved' });
              }
-             // Refresh
              const d = driversCache[driverId];
              renderModalContent('finance', d);
         }
