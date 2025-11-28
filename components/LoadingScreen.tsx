@@ -4,26 +4,25 @@ import { get, ref } from 'firebase/database';
 import { db } from '../services/firebase';
 
 const LoadingScreen: React.FC = () => {
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [hasChecked, setHasChecked] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(() => {
+    return localStorage.getItem('driverLoadingLogo');
+  });
 
   useEffect(() => {
     const fetchBranding = async () => {
         try {
             const snapshot = await get(ref(db, 'settings/branding/driverLoadingLogo'));
             if (snapshot.exists()) {
-                setLogoUrl(snapshot.val());
+                const url = snapshot.val();
+                setLogoUrl(url);
+                localStorage.setItem('driverLoadingLogo', url);
             }
         } catch (error) {
             console.error("Error fetching branding:", error);
-        } finally {
-            setHasChecked(true);
         }
     };
     fetchBranding();
   }, []);
-
-  if (!hasChecked) return <div className="h-screen w-screen bg-[#06B9FF]"></div>;
 
   return (
     <div className="flex flex-col items-center justify-center h-screen w-screen bg-[#06B9FF]">
@@ -35,7 +34,6 @@ const LoadingScreen: React.FC = () => {
         .animate-pulse-logo { animation: pulse-light 2s ease-in-out infinite; }
       `}</style>
       
-      {/* Container for Logo Only - Spinner Removed */}
       <div className="flex flex-col items-center gap-6">
           {logoUrl ? (
               <div className="flex items-center justify-center mb-4">
@@ -46,7 +44,7 @@ const LoadingScreen: React.FC = () => {
                   />
               </div>
           ) : (
-              <div className="h-10"></div>
+             <div className="text-white text-2xl font-bold tracking-widest animate-pulse">PYAPAY</div>
           )}
       </div>
     </div>

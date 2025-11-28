@@ -87,7 +87,6 @@ const showSystemNotification = (title: string, body: string) => {
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(true);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [driverId, setDriverId] = useState<string | null>(null);
   const [driverProfilePic, setDriverProfilePic] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(false);
@@ -127,132 +126,137 @@ const App: React.FC = () => {
     locationRef.current = location;
   }, [location]);
   
-  // Main effect for auth and data loading
+  // Main effect for auth and data loading with enforced delay
   useEffect(() => {
     const dataListeners: (() => void)[] = [];
+    const minLoadTime = new Promise(resolve => setTimeout(resolve, 2000)); // Enforce 2 seconds
+    
+    // Auth Check Promise
+    const authCheck = new Promise<void>((resolve) => {
+        const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+            // Clean up previous listeners if user switched
+            dataListeners.forEach(l => l());
+            dataListeners.length = 0;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-        dataListeners.forEach(l => l());
-        dataListeners.length = 0;
+            setUser(currentUser);
+            setDriverId(null);
+            setIsOnline(false);
+            setTripHistory([]);
+            setTransactions([]);
+            setActiveTrip(null);
+            setTripStage(null);
+            setTripRequests([]);
+            setIsProcessing(false);
 
-        setUser(currentUser);
-        setDriverId(null);
-        setIsOnline(false);
-        setTripHistory([]);
-        setTransactions([]);
-        setActiveTrip(null);
-        setTripStage(null);
-        setIsDataLoaded(false);
-        setTripRequests([]);
-        setIsProcessing(false);
+            if (currentUser) {
+                const currentDriverId = currentUser.uid;
+                setDriverId(currentDriverId);
 
-        if (currentUser) {
-            const currentDriverId = currentUser.uid;
-            setDriverId(currentDriverId);
+                try {
+                    // Fetch Settings first
+                    const settingsRef = ref(db, 'settings/fees');
+                    const settingsListener = onValue(settingsRef, (snap) => {
+                        if(snap.exists()) setFees(snap.val());
+                    });
+                    dataListeners.push(() => off(settingsRef, 'value', settingsListener));
 
-            try {
-                // Fetch Settings first
-                const settingsRef = ref(db, 'settings/fees');
-                const settingsListener = onValue(settingsRef, (snap) => {
-                    if(snap.exists()) setFees(snap.val());
-                });
-                dataListeners.push(() => off(settingsRef, 'value', settingsListener));
-
-                const driverProfileRef = ref(db, `drivers/${currentDriverId}`);
-                const profileSnap = await get(driverProfileRef);
-                if (!profileSnap.exists()) {
-                     console.error("Driver profile not found. Logging out.");
-                     await auth.signOut();
-                     return;
-                }
-
-                // 1. Listen for Profile (Bans & Online Status & Profile Pic)
-                const driverRef = ref(db, `drivers/${currentDriverId}`);
-                const profileListener = onValue(driverRef, (snapshot) => {
-                    if (snapshot.exists()) {
-                        const data = snapshot.val();
-                        // BAN CHECK
-                        if (data.bannedUntil && data.bannedUntil > Date.now()) {
-                            alert(`သင့်အကောင့်ကို ${new Date(data.bannedUntil).toLocaleDateString()} အထိ ပိတ်ထားပါသည်။`);
-                            auth.signOut();
+                    const driverProfileRef = ref(db, `drivers/${currentDriverId}`);
+                    // We don't await this inside the auth loop to prevent blocking, 
+                    // but we check existence to ensure valid driver.
+                    get(driverProfileRef).then(async (profileSnap) => {
+                        if (!profileSnap.exists()) {
+                            console.error("Driver profile not found. Logging out.");
+                            await auth.signOut();
                             return;
                         }
-                        setIsOnline(data.isOnline || false);
-                        setDriverProfilePic(data.profilePic || null);
-                    } else {
-                        auth.signOut();
-                    }
-                });
-                dataListeners.push(() => off(driverRef, 'value', profileListener));
 
-                // 2. Listen for Completed Trips
-                const completedTripsRef = ref(db, `completedTrips/${currentDriverId}`);
-                const historyListener = onValue(completedTripsRef, (snapshot) => {
-                    if (snapshot.exists()) {
-                        const tripsData = snapshot.val();
-                        const tripsArray = Object.values(tripsData) as Trip[];
-                        setTripHistory(tripsArray.sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0)));
-                    } else {
-                        setTripHistory([]);
-                    }
-                });
-                dataListeners.push(() => off(completedTripsRef, 'value', historyListener));
+                        // 1. Listen for Profile
+                        const profileListener = onValue(driverProfileRef, (snapshot) => {
+                            if (snapshot.exists()) {
+                                const data = snapshot.val();
+                                if (data.bannedUntil && data.bannedUntil > Date.now()) {
+                                    alert(`သင့်အကောင့်ကို ${new Date(data.bannedUntil).toLocaleDateString()} အထိ ပိတ်ထားပါသည်။`);
+                                    auth.signOut();
+                                    return;
+                                }
+                                setIsOnline(data.isOnline || false);
+                                setDriverProfilePic(data.profilePic || null);
+                            }
+                        });
+                        dataListeners.push(() => off(driverProfileRef, 'value', profileListener));
 
-                // 3. Listen for Transactions
-                const transactionsRef = ref(db, `transactions/${currentDriverId}`);
-                const txListener = onValue(transactionsRef, (snapshot) => {
-                    if (snapshot.exists()) {
-                         const txData = snapshot.val();
-                         const txArray = Object.keys(txData).map(key => ({ id: key, ...txData[key] }));
-                         setTransactions(txArray.sort((a,b) => b.date - a.date));
-                    } else {
-                        setTransactions([]);
-                    }
-                });
-                dataListeners.push(() => off(transactionsRef, 'value', txListener));
+                        // 2. Listen for Completed Trips
+                        const completedTripsRef = ref(db, `completedTrips/${currentDriverId}`);
+                        const historyListener = onValue(completedTripsRef, (snapshot) => {
+                            if (snapshot.exists()) {
+                                const tripsData = snapshot.val();
+                                const tripsArray = Object.values(tripsData) as Trip[];
+                                setTripHistory(tripsArray.sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0)));
+                            } else {
+                                setTripHistory([]);
+                            }
+                        });
+                        dataListeners.push(() => off(completedTripsRef, 'value', historyListener));
 
-                // 4. Check for active trip
-                const activeTripQuery = dbQuery(ref(db, 'trips'), orderByChild('driverId'), equalTo(currentDriverId));
-                const tripSnapshot = await get(activeTripQuery);
+                        // 3. Listen for Transactions
+                        const transactionsRef = ref(db, `transactions/${currentDriverId}`);
+                        const txListener = onValue(transactionsRef, (snapshot) => {
+                            if (snapshot.exists()) {
+                                const txData = snapshot.val();
+                                const txArray = Object.keys(txData).map(key => ({ id: key, ...txData[key] }));
+                                setTransactions(txArray.sort((a,b) => b.date - a.date));
+                            } else {
+                                setTransactions([]);
+                            }
+                        });
+                        dataListeners.push(() => off(transactionsRef, 'value', txListener));
 
-                if (tripSnapshot.exists()) {
-                    const trips = tripSnapshot.val();
-                    const ongoingTripEntry = Object.entries(trips).find(([_id, trip]) => 
-                        ['accepted', 'at_pickup', 'to_dropoff'].includes((trip as Trip).status)
-                    );
+                        // 4. Check active trip
+                        const activeTripQuery = dbQuery(ref(db, 'trips'), orderByChild('driverId'), equalTo(currentDriverId));
+                        const tripSnapshot = await get(activeTripQuery);
 
-                    if (ongoingTripEntry) {
-                        const [id, tripData] = ongoingTripEntry;
-                        // For re-calc details, we need location. If not ready, use trip pickup as dummy start or just resume data.
-                        const startLoc = locationRef.current || (tripData as Trip).pickup; 
-                        
-                        const tripToResume = { id, ...(tripData as Omit<Trip, 'id'>) };
-                        const details = await calculateTripDetails(startLoc, tripToResume.pickup, tripToResume.dropoff);
-                        const fullTripData = { ...tripToResume, ...details };
-                        
-                        setActiveTrip(fullTripData);
-                        switch(fullTripData.status) {
-                            case 'accepted': setTripStage('to_pickup'); break;
-                            case 'at_pickup': setTripStage('at_pickup'); break;
-                            case 'to_dropoff': setTripStage('to_dropoff'); break;
+                        if (tripSnapshot.exists()) {
+                            const trips = tripSnapshot.val();
+                            const ongoingTripEntry = Object.entries(trips).find(([_id, trip]) => 
+                                ['accepted', 'at_pickup', 'to_dropoff'].includes((trip as Trip).status)
+                            );
+
+                            if (ongoingTripEntry) {
+                                const [id, tripData] = ongoingTripEntry;
+                                // Use fallback location if GPS not ready
+                                const startLoc = locationRef.current || (tripData as Trip).pickup; 
+                                
+                                const tripToResume = { id, ...(tripData as Omit<Trip, 'id'>) };
+                                const details = await calculateTripDetails(startLoc, tripToResume.pickup, tripToResume.dropoff);
+                                const fullTripData = { ...tripToResume, ...details };
+                                
+                                setActiveTrip(fullTripData);
+                                switch(fullTripData.status) {
+                                    case 'accepted': setTripStage('to_pickup'); break;
+                                    case 'at_pickup': setTripStage('at_pickup'); break;
+                                    case 'to_dropoff': setTripStage('to_dropoff'); break;
+                                }
+                            }
                         }
-                    }
+                    });
+                } catch (e) {
+                    console.error("Failed to load driver data:", e);
+                    setFirestoreError("Data Loading Error");
                 }
-            } catch (e) {
-                console.error("Failed to load driver data:", e);
-                setFirestoreError("Data Loading Error");
-            } finally {
-                setIsDataLoaded(true);
-                setIsAuthenticating(false);
             }
-        } else {
-            setIsDataLoaded(true);
-            setIsAuthenticating(false);
-        }
+            resolve();
+        });
+        
+        // Return unsubscribe to main useEffect cleanup
+        return unsubscribeAuth;
+    });
+
+    // Wait for BOTH the minimum time (2s) AND the auth check to complete
+    Promise.all([minLoadTime, authCheck]).then(() => {
+        setIsAuthenticating(false);
     });
 
     return () => {
-        unsubscribeAuth();
         dataListeners.forEach(l => l());
     };
 }, []);
@@ -612,17 +616,14 @@ const App: React.FC = () => {
     await update(driverRef, { isAvailable: true });
   };
 
-  if (isAuthenticating || (user && !isDataLoaded)) return <LoadingScreen />;
+  if (isAuthenticating) return <LoadingScreen />;
   if (!user) return <LoginScreen />;
   
-  // FIX: Allow app to render even if location is not yet acquired to avoid hanging
-  // if (!location) return <LoadingScreen />; 
-
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-[#06B9FF] text-slate-800 font-sans">
       <MapComponent ref={mapRef} userLocation={location} userHeading={heading} activeTrip={activeTrip} tripStage={tripStage} />
       
-      {/* Show toast if GPS is missing */}
+      {/* Show toast if GPS is missing but let the map render a default view */}
       {!location && (
           <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full shadow-md z-30 font-bold animate-pulse text-sm text-center w-max">
               GPS တည်နေရာ ရှာဖွေနေသည်...
