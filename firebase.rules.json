@@ -1,3 +1,4 @@
+
 {
   "rules": {
     ".read": "auth != null",
@@ -9,6 +10,10 @@
       }
     },
     "settings": {
+      ".read": true,
+      ".write": "root.child('admins/' + auth.uid).exists()"
+    },
+    "ads": {
       ".read": true,
       ".write": "root.child('admins/' + auth.uid).exists()"
     },
@@ -50,7 +55,10 @@
     "passengers": {
       "$passengerId": {
         ".read": "auth != null",
-        ".write": "auth != null && ($passengerId === auth.uid || root.child('admins/' + auth.uid).exists())"
+        ".write": "auth != null && ($passengerId === auth.uid || root.child('admins/' + auth.uid).exists())",
+        "completedTrips": {
+            ".write": "auth != null" 
+        }
       }
     },
     "chats": {

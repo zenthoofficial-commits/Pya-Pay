@@ -45,11 +45,6 @@
             position: fixed; inset: 0; background-color: #ffffff; z-index: 100;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        .loading-spinner {
-            border: 4px solid #eff6ff; border-left-color: #45C9FF; /* Theme color */
-            border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .tab-active { border-color: #45C9FF; color: #45C9FF; }
         .star-rating span { font-size: 2rem; cursor: pointer; color: #cbd5e1; transition: color 0.2s; }
         .star-rating span.active { color: #f59e0b; }
@@ -117,11 +112,9 @@
 <body class="text-slate-800">
 
     <div id="loading-overlay">
-        <!-- Container for dynamic loading logo and spinner -->
+        <!-- Container for dynamic loading logo (Spinner Removed) -->
         <div class="flex flex-col items-center gap-6">
              <div id="loading-logo-container" class="h-32 flex items-center justify-center"></div>
-             <!-- Default spinner -->
-             <div class="loading-spinner"></div>
         </div>
     </div>
 
@@ -180,7 +173,7 @@
                 </div>
             </div>
 
-            <!-- Contact Section (Moved Here) -->
+            <!-- Contact Section -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <button onclick="toggleContact()" class="w-full flex justify-between items-center p-5 bg-white hover:bg-slate-50 transition">
                     <span class="text-lg font-bold text-slate-800">ဖုန်းခေါ်ဆိုပြီး တိုက်ရိုက်ငှားရန်</span>
@@ -211,7 +204,6 @@
         </div>
     </div>
 
-    <!-- ... (Rest of UI unchanged: Modals, Map, Login) ... -->
     <!-- Coming Soon Modal -->
     <div id="coming-soon-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm animate-fade-in">
         <div class="bg-white rounded-2xl w-full max-w-sm p-6 text-center shadow-xl">
@@ -241,8 +233,11 @@
     <!-- Login Screen -->
     <div id="login-screen" class="hidden absolute inset-0 bg-white z-50 flex flex-col items-center justify-center p-6 animate-fade-in">
         <div class="w-full max-w-sm text-center">
-            <h1 class="text-5xl font-bold text-theme mb-2">Pyapay</h1>
-            <p class="text-slate-500 mb-8">ခရီးသည် အက်ပ် (Passenger)</p>
+            <div id="login-logo-container" class="mb-4 flex flex-col items-center">
+                 <h1 class="text-5xl font-bold text-theme mb-2">Pyapay</h1>
+                 <p class="text-slate-500 mb-8">ခရီးသည် အက်ပ် (Passenger)</p>
+            </div>
+            
             <div class="bg-white border border-slate-200 shadow-xl rounded-2xl p-6 space-y-4">
                 <input id="passenger-name" type="text" placeholder="သင့်အမည်" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-theme">
                 <input id="passenger-phone" type="tel" placeholder="ဖုန်းနံပါတ်" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-theme">
@@ -256,7 +251,6 @@
         <!-- Header -->
         <header id="main-header" class="absolute top-4 left-4 right-4 z-10 flex justify-between items-center pointer-events-none">
              <div class="flex gap-2 pointer-events-auto">
-                 <!-- New Back Button to Home -->
                  <button onclick="goBackToHome()" class="bg-white p-3 rounded-full shadow-lg border border-slate-200 hover:bg-slate-50 text-slate-600">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                  </button>
@@ -347,7 +341,7 @@
         <div id="trip-status-panel" class="hidden absolute bottom-0 left-0 right-0 bg-white p-4 rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.1)] animate-slide-up z-10"></div>
     </div>
     
-    <!-- Profile Modal, Rating Modal, Chat Modal (same as before) -->
+    <!-- Profile Modal -->
     <div id="profile-modal" class="hidden absolute inset-0 bg-black/60 z-40 animate-fade-in flex justify-center items-center backdrop-blur-sm">
         <div class="bg-white w-full max-w-md h-full max-h-[95vh] rounded-2xl shadow-2xl flex flex-col">
             <header class="p-4 flex justify-between items-center border-b border-slate-100">
@@ -368,8 +362,14 @@
             </div>
             <div id="history-content" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar"></div>
             <div id="favorites-content" class="hidden flex-1 overflow-y-auto p-4 space-y-4">
-                <div><label class="text-sm text-slate-500 font-bold">အိမ်</label><input id="home-address-input" type="text" placeholder="လိပ်စာ" class="w-full mt-1 bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm text-slate-800"></div>
-                 <div><label class="text-sm text-slate-500 font-bold">အလုပ်</label><input id="work-address-input" type="text" placeholder="လိပ်စာ" class="w-full mt-1 bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm text-slate-800"></div>
+                <div>
+                    <label class="text-sm text-slate-500 font-bold">အိမ်</label>
+                    <input id="home-address-input" type="text" placeholder="လိပ်စာ" class="w-full mt-1 bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm text-slate-800">
+                </div>
+                 <div>
+                    <label class="text-sm text-slate-500 font-bold">အလုပ်</label>
+                    <input id="work-address-input" type="text" placeholder="လိပ်စာ" class="w-full mt-1 bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm text-slate-800">
+                </div>
                 <button id="save-favorites-button" class="w-full bg-theme text-white font-bold py-2 mt-2 rounded-lg shadow">သိမ်းဆည်းမည်</button>
             </div>
             <div id="settings-content" class="hidden flex-1 overflow-y-auto p-4 space-y-4">
@@ -378,16 +378,20 @@
         </div>
     </div>
 
+    <!-- Rating Modal -->
     <div id="rating-modal" class="hidden absolute inset-0 bg-black/70 z-50 flex justify-center items-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl w-full max-w-sm p-6 text-center shadow-2xl">
             <h3 class="text-xl font-bold text-slate-800 mb-2">ခရီးစဉ် ပြီးဆုံးပါပြီ</h3>
             <p class="text-slate-500 mb-6">ယာဉ်မောင်းအား အမှတ်ပေးပါ</p>
-            <div class="star-rating flex justify-center gap-2 mb-6" id="star-rating"><span data-val="1">★</span><span data-val="2">★</span><span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span></div>
+            <div class="star-rating flex justify-center gap-2 mb-6" id="star-rating">
+                <span data-val="1">★</span><span data-val="2">★</span><span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span>
+            </div>
             <button id="submit-rating-btn" class="w-full bg-theme text-white font-bold py-3 rounded-xl shadow-lg hover-bg-theme">အမှတ်ပေးမည်</button>
             <button id="skip-rating-btn" class="mt-3 text-slate-400 hover:text-slate-600 font-semibold text-sm">ကျော်သွားမည်</button>
         </div>
     </div>
 
+    <!-- Modals -->
     <div id="chat-modal" class="hidden"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -404,7 +408,7 @@
         const auth = getAuth(app);
         const db = getDatabase(app);
 
-        // ... (Variables same as before)
+        // ... (Variables same as before) ...
         let map, userMarker, routeControl, driverRouteControl;
         let activeDriverMarker = null;
         let currentUser = null, passengerInfo = null, currentLocation = null, activeTrip = null;
@@ -460,7 +464,6 @@
         const pickupIcon = L.divIcon({ html: `<img src="${BLUE_PIN_SVG}" class="w-8 h-8">`, className: '', iconSize: [32, 32], iconAnchor: [16, 32] });
         const dropoffIcon = L.divIcon({ html: `<img src="${RED_PIN_SVG}" class="w-8 h-8">`, className: '', iconSize: [32, 32], iconAnchor: [16, 32] });
 
-        // Sounds
         const messageSound = new Audio("data:audio/wav;base64,UklGRlFFT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YUFENQDI7PAA8gDwAPUA9ADzAPIBAAIEAwQDBAIBAAAAAP8A/gD4APUA8gDxAPIA8gDzAO8A7ADoAN4A2gDYANoA3gDkAO0A9AEAAv9//wD+APwA+gD7AP0AAQIDBAUGBwgJCgsMDQ4PDxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==");
         const tripAcceptSound = new Audio("data:audio/wav;base64,UklGRlFFT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YUFENQDI7PAA8gDwAPUA9ADzAPIBAAIEAwQDBAIBAAAAAP8A/gD4APUA8gDxAPIA8gDzAO8A7ADoAN4A2gDYANoA3gDkAO0A9AEAAv9//wD+APwA+gD7AP0AAQIDBAUGBwgJCgsMDQ4PDxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==");
         
@@ -483,10 +486,19 @@
         }
 
         function setupAuthListener() {
+            // Safety Timeout to force UI to load if Firebase hangs (e.g. HopWeb issue)
+            const safetyTimeout = setTimeout(() => {
+                dom.loadingOverlay.classList.add('hidden');
+                // Force show login if user not detected yet
+                if (dom.loginScreen.classList.contains('hidden') && dom.homeMenu.classList.contains('hidden')) {
+                    dom.loginScreen.classList.remove('hidden');
+                }
+            }, 5000); // 5 seconds fallback
+
             onAuthStateChanged(auth, async user => {
-                dom.loadingOverlay.classList.remove('hidden');
+                clearTimeout(safetyTimeout); // Clear fallback if auth responds
                 
-                // Fetch loading logo logic
+                // Fetch Branding Logic
                 try {
                     const s = await get(ref(db, 'settings/branding'));
                     if(s.exists()) {
@@ -495,18 +507,25 @@
                             const c = document.getElementById('loading-logo-container');
                             c.innerHTML = `<img src="${b.passengerLoadingLogo}" class="w-48 h-auto object-contain animate-pulse">`;
                         }
+                        if(b.passengerLoadingLogo) { 
+                             const loginC = document.getElementById('login-logo-container');
+                             loginC.innerHTML = `<img src="${b.passengerLoadingLogo}" class="w-48 h-auto object-contain drop-shadow-md mb-6">`;
+                        }
+                        if(b.homeLogo) {
+                            const hc = document.getElementById('home-logo-container');
+                            hc.innerHTML = `<img src="${b.homeLogo}" class="h-8 md:h-10 w-auto object-contain">`;
+                        }
                     }
                 } catch(e) {}
 
-                // Enforce 2 second wait
-                const minLoadTime = new Promise(resolve => setTimeout(resolve, 2000));
+                const minLoadTime = new Promise(resolve => setTimeout(resolve, 1000));
 
                 if (user) {
                     currentUser = user;
                     const snapshot = await get(ref(db, `passengers/${user.uid}`));
                     if (snapshot.exists()) {
                         passengerInfo = snapshot.val();
-                        await Promise.all([fetchSettings(), fetchAds(), fetchBranding(), checkForActiveTrip(user.uid), minLoadTime]);
+                        await Promise.all([fetchSettings(), fetchAds(), checkForActiveTrip(user.uid), minLoadTime]);
                         dom.loginScreen.classList.add('hidden');
                     } else {
                         await minLoadTime;
@@ -525,19 +544,6 @@
             });
         }
         
-        async function fetchBranding() {
-            try {
-                const s = await get(ref(db, 'settings/branding'));
-                if(s.exists()) {
-                    const b = s.val();
-                    if(b.homeLogo) {
-                        const c = document.getElementById('home-logo-container');
-                        c.innerHTML = `<img src="${b.homeLogo}" class="h-8 md:h-10 w-auto object-contain">`;
-                    }
-                }
-            } catch(e) { console.error("Branding fetch error", e); }
-        }
-
         async function fetchSettings() {
              const snap = await get(ref(db, 'settings/fees'));
              if(snap.exists()) { const data = snap.val(); pricingSettings = { baseFare: data.baseFare || 1500, pricePerKm: data.pricePerKm || 500 }; }

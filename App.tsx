@@ -221,10 +221,13 @@ const App: React.FC = () => {
                         ['accepted', 'at_pickup', 'to_dropoff'].includes((trip as Trip).status)
                     );
 
-                    if (ongoingTripEntry && locationRef.current) {
+                    if (ongoingTripEntry) {
                         const [id, tripData] = ongoingTripEntry;
+                        // For re-calc details, we need location. If not ready, use trip pickup as dummy start or just resume data.
+                        const startLoc = locationRef.current || (tripData as Trip).pickup; 
+                        
                         const tripToResume = { id, ...(tripData as Omit<Trip, 'id'>) };
-                        const details = await calculateTripDetails(locationRef.current, tripToResume.pickup, tripToResume.dropoff);
+                        const details = await calculateTripDetails(startLoc, tripToResume.pickup, tripToResume.dropoff);
                         const fullTripData = { ...tripToResume, ...details };
                         
                         setActiveTrip(fullTripData);
@@ -321,7 +324,6 @@ const App: React.FC = () => {
     
     // LOW BALANCE CHECK
     if (balance <= 500) {
-        // If balance is too low, don't listen/show requests
         setTripRequests([]);
         return;
     }
@@ -340,8 +342,8 @@ const App: React.FC = () => {
              return !trip.driverId;
           })
           .map(async (trip) => {
-            const currentLocation = locationRef.current;
-            if (!currentLocation) return null;
+            // FIX: If location is not yet available, use a fallback to allow processing
+            const currentLocation = locationRef.current || { lat: 16.8409, lng: 96.1735 };
 
             const details = await calculateTripDetails(currentLocation, trip.pickup, trip.dropoff);
             if (!details.pickupLeg || !details.dropoffLeg) return null;
@@ -454,8 +456,8 @@ const App: React.FC = () => {
     if (tripRequestAudioRef.current) {
         tripRequestAudioRef.current.load();
     }
-    if (typeof window.DeviceOrientationEvent.requestPermission === 'function') {
-        await window.DeviceOrientationEvent.requestPermission();
+    if (typeof window.DeviceOrientationEvent !== 'undefined' && typeof window.DeviceOrientationEvent.requestPermission === 'function') {
+        try { await window.DeviceOrientationEvent.requestPermission(); } catch(e) {}
     }
     
     const driverRef = ref(db, `drivers/${driverId}`);
@@ -612,12 +614,21 @@ const App: React.FC = () => {
 
   if (isAuthenticating || (user && !isDataLoaded)) return <LoadingScreen />;
   if (!user) return <LoginScreen />;
-  if (!location) return <LoadingScreen />;
+  
+  // FIX: Allow app to render even if location is not yet acquired to avoid hanging
+  // if (!location) return <LoadingScreen />; 
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-[#06B9FF] text-slate-800 font-sans">
       <MapComponent ref={mapRef} userLocation={location} userHeading={heading} activeTrip={activeTrip} tripStage={tripStage} />
       
+      {/* Show toast if GPS is missing */}
+      {!location && (
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full shadow-md z-30 font-bold animate-pulse text-sm text-center w-max">
+              GPS တည်နေရာ ရှာဖွေနေသည်...
+          </div>
+      )}
+
       {activeTrip && tripStage && !viewingTripSummary ? (
         <OnTripUI 
           trip={activeTrip} 

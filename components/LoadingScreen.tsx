@@ -5,6 +5,7 @@ import { db } from '../services/firebase';
 
 const LoadingScreen: React.FC = () => {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
     const fetchBranding = async () => {
@@ -15,10 +16,14 @@ const LoadingScreen: React.FC = () => {
             }
         } catch (error) {
             console.error("Error fetching branding:", error);
+        } finally {
+            setHasChecked(true);
         }
     };
     fetchBranding();
   }, []);
+
+  if (!hasChecked) return <div className="h-screen w-screen bg-[#06B9FF]"></div>;
 
   return (
     <div className="flex flex-col items-center justify-center h-screen w-screen bg-[#06B9FF]">
@@ -28,21 +33,12 @@ const LoadingScreen: React.FC = () => {
           50% { opacity: 0.7; transform: scale(1.05); }
         }
         .animate-pulse-logo { animation: pulse-light 2s ease-in-out infinite; }
-        .loading-spinner {
-            border: 4px solid #eff6ff; 
-            border-left-color: white; /* White for driver app on blue bg */
-            border-radius: 50%; 
-            width: 40px; 
-            height: 40px; 
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
       `}</style>
       
-      {/* Container for Logo and Spinner */}
+      {/* Container for Logo Only - Spinner Removed */}
       <div className="flex flex-col items-center gap-6">
           {logoUrl ? (
-              <div className="h-32 flex items-center justify-center">
+              <div className="flex items-center justify-center mb-4">
                   <img 
                     src={logoUrl} 
                     alt="Loading" 
@@ -50,12 +46,8 @@ const LoadingScreen: React.FC = () => {
                   />
               </div>
           ) : (
-              // Empty div to hold space if no logo
-              <div className="h-32"></div>
+              <div className="h-10"></div>
           )}
-          
-          {/* Spinner below image */}
-          <div className="loading-spinner"></div>
       </div>
     </div>
   );

@@ -1,14 +1,31 @@
 
-import React, { useState } from 'react';
-import { auth } from '../services/firebase';
+import React, { useState, useEffect } from 'react';
+import { auth, db } from '../services/firebase';
 // @ts-ignore
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { ref, get } from 'firebase/database';
 
 const LoginScreen: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchLogo = async () => {
+            try {
+                // Settings is now public read per rules
+                const snapshot = await get(ref(db, 'settings/branding/driverLoadingLogo'));
+                if (snapshot.exists()) {
+                    setLogoUrl(snapshot.val());
+                }
+            } catch (e) {
+                console.error("Error fetching logo", e);
+            }
+        };
+        fetchLogo();
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -54,10 +71,22 @@ const LoginScreen: React.FC = () => {
                 }
             `}</style>
             
-            <div className="text-5xl md:text-7xl font-extrabold tracking-widest animate-float mb-2 text-white drop-shadow-md">
-                Pyapay
+            <div className="mb-8 animate-float flex flex-col items-center">
+                {logoUrl ? (
+                    <img 
+                        src={logoUrl} 
+                        alt="Pyapay Driver" 
+                        className="w-48 h-auto object-contain drop-shadow-md"
+                    />
+                ) : (
+                    <>
+                        <div className="text-5xl md:text-7xl font-extrabold tracking-widest text-white drop-shadow-md">
+                            Pyapay
+                        </div>
+                        <p className="text-white/80 mt-2 font-medium">Driver Partner App</p>
+                    </>
+                )}
             </div>
-            <p className="text-white/80 mb-10 font-medium">Driver Partner App</p>
 
             <form 
                 onSubmit={handleSubmit}
