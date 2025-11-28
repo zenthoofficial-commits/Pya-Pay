@@ -459,7 +459,7 @@
         };
         
         // --- Init LocalStorage Logo ---
-        // Immediate check before anything else
+        // Immediate check before anything else for instant display
         const cachedLoadingLogo = localStorage.getItem('passengerLoadingLogo');
         if(cachedLoadingLogo) {
              const c = document.getElementById('loading-logo-container');
@@ -481,7 +481,19 @@
         function playDoubleBeep() { messageSound.currentTime = 0; messageSound.play().catch(e=>{}); setTimeout(() => { messageSound.currentTime = 0; messageSound.play().catch(e=>{}); }, 200); }
         function showNotification(title, body) { if (Notification.permission === "granted") new Notification(title, { body, icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063823.png' }); }
 
-        function initApp() { initMap(); setupAuthListener(); setupEventListeners(); }
+        function initApp() { 
+            // Trigger Permissions Early
+            if (navigator.geolocation) {
+                 navigator.geolocation.getCurrentPosition(() => {}, () => {});
+            }
+            if (Notification.permission !== "granted") {
+                Notification.requestPermission();
+            }
+
+            initMap(); 
+            setupAuthListener(); 
+            setupEventListeners(); 
+        }
 
         function initMap() {
             map = L.map('map', { zoomControl: false }).setView([16.8409, 96.1735], 13);
@@ -517,9 +529,7 @@
                     if(s.exists()) {
                         const b = s.val();
                         if(b.passengerLoadingLogo) {
-                            const c = document.getElementById('loading-logo-container');
-                            c.innerHTML = `<img src="${b.passengerLoadingLogo}" class="w-48 h-auto object-contain animate-pulse">`;
-                            // Cache it
+                            // Update cache for next time
                             localStorage.setItem('passengerLoadingLogo', b.passengerLoadingLogo);
                             
                             // Also update login screen logo
@@ -538,6 +548,7 @@
                     const snapshot = await get(ref(db, `passengers/${user.uid}`));
                     if (snapshot.exists()) {
                         passengerInfo = snapshot.val();
+                        // Wait for minimum time before showing UI
                         await Promise.all([fetchSettings(), fetchAds(), checkForActiveTrip(user.uid), minLoadTime]);
                         dom.loginScreen.classList.add('hidden');
                     } else {

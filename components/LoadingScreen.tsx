@@ -4,6 +4,7 @@ import { get, ref } from 'firebase/database';
 import { db } from '../services/firebase';
 
 const LoadingScreen: React.FC = () => {
+  // Initialize state directly from localStorage for instant render
   const [logoUrl, setLogoUrl] = useState<string | null>(() => {
     return localStorage.getItem('driverLoadingLogo');
   });
@@ -14,6 +15,7 @@ const LoadingScreen: React.FC = () => {
             const snapshot = await get(ref(db, 'settings/branding/driverLoadingLogo'));
             if (snapshot.exists()) {
                 const url = snapshot.val();
+                // Update state and cache for next time
                 setLogoUrl(url);
                 localStorage.setItem('driverLoadingLogo', url);
             }
@@ -21,6 +23,7 @@ const LoadingScreen: React.FC = () => {
             console.error("Error fetching branding:", error);
         }
     };
+    // Fetch in background
     fetchBranding();
   }, []);
 

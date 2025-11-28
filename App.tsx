@@ -125,6 +125,17 @@ const App: React.FC = () => {
   useEffect(() => {
     locationRef.current = location;
   }, [location]);
+
+  // Request Permissions Early
+  useEffect(() => {
+    if (navigator.geolocation) {
+         // Trigger permission prompt immediately
+         navigator.geolocation.getCurrentPosition(() => {}, () => {});
+    }
+    if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        Notification.requestPermission();
+    }
+  }, []);
   
   // Main effect for auth and data loading with enforced delay
   useEffect(() => {
@@ -152,18 +163,19 @@ const App: React.FC = () => {
                 const currentDriverId = currentUser.uid;
                 setDriverId(currentDriverId);
 
-                try {
-                    // Fetch Settings first
-                    const settingsRef = ref(db, 'settings/fees');
-                    const settingsListener = onValue(settingsRef, (snap) => {
-                        if(snap.exists()) setFees(snap.val());
-                    });
-                    dataListeners.push(() => off(settingsRef, 'value', settingsListener));
+                // Start loading data in background
+                (async () => {
+                    try {
+                        // Fetch Settings first
+                        const settingsRef = ref(db, 'settings/fees');
+                        const settingsListener = onValue(settingsRef, (snap) => {
+                            if(snap.exists()) setFees(snap.val());
+                        });
+                        dataListeners.push(() => off(settingsRef, 'value', settingsListener));
 
-                    const driverProfileRef = ref(db, `drivers/${currentDriverId}`);
-                    // We don't await this inside the auth loop to prevent blocking, 
-                    // but we check existence to ensure valid driver.
-                    get(driverProfileRef).then(async (profileSnap) => {
+                        const driverProfileRef = ref(db, `drivers/${currentDriverId}`);
+                        // Check existence
+                        const profileSnap = await get(driverProfileRef);
                         if (!profileSnap.exists()) {
                             console.error("Driver profile not found. Logging out.");
                             await auth.signOut();
@@ -238,11 +250,11 @@ const App: React.FC = () => {
                                 }
                             }
                         }
-                    });
-                } catch (e) {
-                    console.error("Failed to load driver data:", e);
-                    setFirestoreError("Data Loading Error");
-                }
+                    } catch (e) {
+                        console.error("Failed to load driver data:", e);
+                        setFirestoreError("Data Loading Error");
+                    }
+                })();
             }
             resolve();
         });

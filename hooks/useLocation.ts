@@ -11,36 +11,47 @@ const useLocation = () => {
     let watchId: number;
 
     const startWatching = (highAccuracy: boolean) => {
-        if (navigator.geolocation) {
-            watchId = navigator.geolocation.watchPosition(
-                (position) => {
-                    setLocation({
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude,
-                    });
-                    setError(null);
-                },
-                (err) => {
-                    if (highAccuracy && err.code === err.TIMEOUT) {
-                        // If high accuracy times out, try low accuracy
-                        console.warn("High accuracy timeout, switching to low accuracy");
-                        navigator.geolocation.clearWatch(watchId);
-                        startWatching(false);
-                    } else {
-                         setError(`Geolocation error: ${err.message}`);
-                    }
-                },
-                {
-                    enableHighAccuracy: highAccuracy,
-                    timeout: highAccuracy ? 5000 : 10000,
-                    maximumAge: 0,
-                }
-            );
-        } else {
-            setError("Geolocation is not supported by this browser.");
+        if (!navigator.geolocation) {
+            setError("Geolocation is not supported.");
+            return;
         }
+
+        watchId = navigator.geolocation.watchPosition(
+            (position) => {
+                setLocation({
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                });
+                setError(null);
+            },
+            (err) => {
+                console.warn(`Geolocation error (${highAccuracy ? 'High' : 'Low'}): ${err.message}`);
+                // If high accuracy fails, try low accuracy
+                if (highAccuracy) {
+                     navigator.geolocation.clearWatch(watchId);
+                     startWatching(false);
+                } else {
+                     setError(`Location Error: ${err.message}`);
+                }
+            },
+            {
+                enableHighAccuracy: highAccuracy,
+                timeout: highAccuracy ? 5000 : 10000,
+                maximumAge: 0, 
+            }
+        );
     };
 
+    // 1. Attempt to get a quick cached position first for immediate UI feedback
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        },
+        (err) => { console.log("No cached position available"); },
+        { maximumAge: Infinity, timeout: 1000, enableHighAccuracy: false }
+    );
+
+    // 2. Start watching (High Accuracy first)
     startWatching(true);
 
     const handleOrientation = (event: DeviceOrientationEvent) => {
