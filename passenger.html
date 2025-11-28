@@ -484,7 +484,11 @@
         function initApp() { 
             // Trigger Permissions Early
             if (navigator.geolocation) {
-                 navigator.geolocation.getCurrentPosition(() => {}, () => {});
+                 navigator.geolocation.getCurrentPosition(
+                    () => console.log('GPS OK'),
+                    (err) => console.warn('GPS Error', err),
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                 );
             }
             if (Notification.permission !== "granted") {
                 Notification.requestPermission();
@@ -549,7 +553,9 @@
                     if (snapshot.exists()) {
                         passengerInfo = snapshot.val();
                         // Wait for minimum time before showing UI
-                        await Promise.all([fetchSettings(), fetchAds(), checkForActiveTrip(user.uid), minLoadTime]);
+                        try {
+                            await Promise.all([fetchSettings(), fetchAds(), checkForActiveTrip(user.uid), minLoadTime]);
+                        } catch(e) { console.error("Loading promise error", e); }
                         dom.loginScreen.classList.add('hidden');
                     } else {
                         await minLoadTime;

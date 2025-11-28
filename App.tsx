@@ -129,8 +129,13 @@ const App: React.FC = () => {
   // Request Permissions Early
   useEffect(() => {
     if (navigator.geolocation) {
-         // Trigger permission prompt immediately
-         navigator.geolocation.getCurrentPosition(() => {}, () => {});
+         // Trigger permission prompt immediately by requesting a single position
+         // This forces the browser/OS to ask the user "Allow location?"
+         navigator.geolocation.getCurrentPosition(
+             () => { console.log("Location permission granted."); }, 
+             (err) => { console.warn("Location permission issue:", err); },
+             { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+         );
     }
     if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
         Notification.requestPermission();
@@ -142,6 +147,11 @@ const App: React.FC = () => {
     const dataListeners: (() => void)[] = [];
     const minLoadTime = new Promise(resolve => setTimeout(resolve, 2000)); // Enforce 2 seconds
     
+    // Safety timeout: If Firebase auth hangs, force loading to finish after 8 seconds
+    const safetyTimeout = setTimeout(() => {
+        setIsAuthenticating(false);
+    }, 8000);
+
     // Auth Check Promise
     const authCheck = new Promise<void>((resolve) => {
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -265,10 +275,16 @@ const App: React.FC = () => {
 
     // Wait for BOTH the minimum time (2s) AND the auth check to complete
     Promise.all([minLoadTime, authCheck]).then(() => {
+        clearTimeout(safetyTimeout);
+        setIsAuthenticating(false);
+    }).catch(err => {
+        console.error("Loading promise failed:", err);
+        clearTimeout(safetyTimeout);
         setIsAuthenticating(false);
     });
 
     return () => {
+        clearTimeout(safetyTimeout);
         dataListeners.forEach(l => l());
     };
 }, []);
