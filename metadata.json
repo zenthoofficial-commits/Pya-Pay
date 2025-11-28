@@ -1,6 +1,6 @@
 {
   "name": "Pyapay Drive Official",
-  "description": "A modern ride-hailing application for drivers, featuring real-time trip requests, navigation, and a sleek, dark-themed user interface.",
+  "description": "A modern ride-hailing application for drivers.",
   "requestFramePermissions": [
     "geolocation"
   ]

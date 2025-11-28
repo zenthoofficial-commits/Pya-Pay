@@ -25,37 +25,37 @@ const OnTripUI: React.FC<OnTripUIProps> = ({ trip, tripStage, onArrivedAtPickup,
     switch(tripStage) {
       case 'to_pickup':
         return {
-          title: "Going to Pickup",
-          addressLabel: "PICKUP LOCATION",
+          title: "ခရီးသည်ထံ သွားနေသည်",
+          addressLabel: "လာကြိုရမည့် နေရာ",
           address: getCleanAddress(trip.pickupAddress),
-          buttonText: isLoading ? "Processing..." : "Arrived at Pickup",
+          buttonText: isLoading ? "လုပ်ဆောင်နေသည်..." : "ကြိုမည့်နေရာ ရောက်ပြီ",
           buttonAction: onArrivedAtPickup,
           colorClass: "bg-amber-500 hover:bg-amber-600"
         };
       case 'at_pickup':
         return {
-          title: "Waiting for Passenger",
-          addressLabel: "PICKUP LOCATION",
+          title: "ခရီးသည်ကို စောင့်နေသည်",
+          addressLabel: "လာကြိုရမည့် နေရာ",
           address: getCleanAddress(trip.pickupAddress),
-          buttonText: isLoading ? "Starting Trip..." : "Start Trip",
+          buttonText: isLoading ? "စတင်နေသည်..." : "ခရီးစဉ် စတင်မည်",
           buttonAction: onStartTrip,
           colorClass: "bg-green-600 hover:bg-green-700"
         };
       case 'to_dropoff':
         return {
-          title: "Driving to Dropoff",
-          addressLabel: "DROPOFF LOCATION",
+          title: "ပို့ဆောင်မည့်နေရာ သွားနေသည်",
+          addressLabel: "ပို့ဆောင်ရမည့် နေရာ",
           address: getCleanAddress(trip.dropoffAddress),
-          buttonText: isLoading ? "ပြီးဆုံးအောင် လုပ်ဆောင်နေသည်..." : "Complete Trip",
+          buttonText: isLoading ? "ပြီးဆုံးအောင် လုပ်ဆောင်နေသည်..." : "ခရီးစဉ် ပြီးဆုံးမည်",
           buttonAction: onCompleteTrip,
           colorClass: "bg-blue-600 hover:bg-blue-700"
         };
       default:
         return {
-          title: "ON ROAD",
-          addressLabel: "DESTINATION",
+          title: "ခရီးစဉ်အတွင်း",
+          addressLabel: "ပို့ဆောင်ရမည့် နေရာ",
           address: getCleanAddress(trip.dropoffAddress),
-          buttonText: "Complete Trip",
+          buttonText: "ခရီးစဉ် ပြီးဆုံးမည်",
           buttonAction: onCompleteTrip,
           colorClass: "bg-gray-800"
         };
@@ -100,7 +100,7 @@ const OnTripUI: React.FC<OnTripUIProps> = ({ trip, tripStage, onArrivedAtPickup,
             <div className="bg-green-100 p-3 rounded-full group-hover:bg-green-200 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
             </div>
-            <span className="text-xs font-medium text-slate-600">Call</span>
+            <span className="text-xs font-medium text-slate-600">ဖုန်းခေါ်မည်</span>
           </button>
           
           <div className="h-10 w-px bg-gray-200"></div>
@@ -110,7 +110,7 @@ const OnTripUI: React.FC<OnTripUIProps> = ({ trip, tripStage, onArrivedAtPickup,
                 <div className="bg-blue-100 p-3 rounded-full group-hover:bg-blue-200 transition-colors">
                     <ChatIcon className="w-6 h-6 text-blue-600" />
                 </div>
-                <span className="text-xs font-medium text-slate-600">Chat</span>
+                <span className="text-xs font-medium text-slate-600">စကားပြောမည်</span>
                 {unreadCount > 0 && (
                     <span className="absolute -top-1 right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-white">
                         {unreadCount}

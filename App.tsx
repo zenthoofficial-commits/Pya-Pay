@@ -173,7 +173,7 @@ const App: React.FC = () => {
                         const data = snapshot.val();
                         // BAN CHECK
                         if (data.bannedUntil && data.bannedUntil > Date.now()) {
-                            alert(`Your account has been suspended until ${new Date(data.bannedUntil).toLocaleDateString()}.`);
+                            alert(`သင့်အကောင့်ကို ${new Date(data.bannedUntil).toLocaleDateString()} အထိ ပိတ်ထားပါသည်။`);
                             auth.signOut();
                             return;
                         }
@@ -237,7 +237,7 @@ const App: React.FC = () => {
                 }
             } catch (e) {
                 console.error("Failed to load driver data:", e);
-                setFirestoreError("Could not load driver data.");
+                setFirestoreError("Data Loading Error");
             } finally {
                 setIsDataLoaded(true);
                 setIsAuthenticating(false);
@@ -318,6 +318,13 @@ const App: React.FC = () => {
       setTripRequests([]);
       return;
     }
+    
+    // LOW BALANCE CHECK
+    if (balance <= 500) {
+        // If balance is too low, don't listen/show requests
+        setTripRequests([]);
+        return;
+    }
       
     const tripsRef = ref(db, "trips");
     const q = dbQuery(tripsRef, orderByChild("status"), equalTo("pending"));
@@ -328,14 +335,8 @@ const App: React.FC = () => {
         const potentialTripsPromises = Object.entries(tripsData)
           .map(([id, data]) => ({ id, ...(data as any) }))
           .filter(trip => {
-             // NEW: Check if this driver is the requested one. 
-             // Logic: The passenger app or backend queues drivers. We only show the request if requestedDriverId matches me.
-             // OR if there is no specific requested ID but also no driver assigned.
              if (trip.requestedDriverId && trip.requestedDriverId !== driverId) return false;
-             
-             // Check if I previously declined it
              if (trip.declinedDriverIds && trip.declinedDriverIds.includes(driverId)) return false;
-
              return !trip.driverId;
           })
           .map(async (trip) => {
@@ -352,7 +353,7 @@ const App: React.FC = () => {
         const resolvedTrips = (await Promise.all(potentialTripsPromises)).filter((t): t is Trip => t !== null);
         
         if (resolvedTrips.length > 0 && resolvedTrips.length > tripRequests.length) {
-            showSystemNotification("New Trip Request", "ခရီးစဉ်အသစ် ရောက်ရှိနေပါသည်။");
+            showSystemNotification("ခရီးစဉ် အသစ်", "ခရီးစဉ်အသစ် ရောက်ရှိနေပါသည်။");
         }
 
         setTripRequests(resolvedTrips.sort((a,b) => b.fare - a.fare));
@@ -364,7 +365,7 @@ const App: React.FC = () => {
     });
     
     return () => listener();
-  }, [isOnline, activeTrip, driverId]);
+  }, [isOnline, activeTrip, driverId, balance]); // Added balance to dependency
 
 
   useEffect(() => {
@@ -387,7 +388,7 @@ const App: React.FC = () => {
         if (snapshot.exists()) {
             const updatedTripData = snapshot.val() as Trip;
             if (updatedTripData.status === 'cancelled') {
-                showSystemNotification("Trip Cancelled", "ခရီးသည်က ခရီးစဉ်ကို ပယ်ဖျက်လိုက်ပါသည်။");
+                showSystemNotification("ခရီးစဉ် ပယ်ဖျက်လိုက်သည်", "ခရီးသည်က ခရီးစဉ်ကို ပယ်ဖျက်လိုက်ပါသည်။");
                 const cancellationFee = updatedTripData.cancellationFee || null;
                 setCancellationAlert({ show: true, fee: cancellationFee });
             }
@@ -429,8 +430,7 @@ const App: React.FC = () => {
         const driverRef = ref(db, `drivers/${driverId}`);
         await update(driverRef, { isAvailable: false });
     } catch (e) {
-        console.error("Error accepting trip: ", e);
-        alert("Trip could not be accepted. Please try again.");
+        alert("လက်ခံ၍ မရနိုင်ပါ။");
         setActiveTrip(null);
         setTripStage(null);
     } finally {
@@ -440,6 +440,12 @@ const App: React.FC = () => {
   
   const handleGoOnline = async () => {
     if (!driverId) return;
+    
+    // Balance check for Online Toggle
+    if (balance <= 500) {
+        alert("လက်ကျန်ငွေ ၅၀၀ အောက် နည်းနေပါသဖြင့် အွန်လိုင်းဝင်၍ မရပါ။ ငွေဖြည့်သွင်းပါ။");
+        return;
+    }
     
     if (Notification.permission !== "granted") {
         await Notification.requestPermission();
@@ -468,11 +474,9 @@ const App: React.FC = () => {
 
   const handleDeclineTrip = async (tripId: string) => {
       if (!driverId) return;
-      // Optimistically remove locally
       setTripRequests(prev => prev.filter(t => t.id !== tripId));
       
       try {
-          // Update Firebase so the Passenger app knows to skip this driver
           const tripRef = ref(db, `trips/${tripId}`);
           const snapshot = await get(tripRef);
           if (snapshot.exists()) {
@@ -496,7 +500,7 @@ const App: React.FC = () => {
         await update(tripRef, { status: 'at_pickup' });
         setTripStage('at_pickup');
     } catch (e) {
-        console.error("Failed to update trip status to at_pickup:", e);
+        console.error("Failed", e);
     } finally {
         setIsProcessing(false);
     }
@@ -510,7 +514,7 @@ const App: React.FC = () => {
         await update(tripRef, { status: 'to_dropoff' });
         setTripStage('to_dropoff');
     } catch (e) {
-        console.error("Failed to update trip status to to_dropoff:", e);
+        console.error("Failed", e);
     } finally {
         setIsProcessing(false);
     }
@@ -528,7 +532,8 @@ const App: React.FC = () => {
             completedAt: Date.now(),
             commissionAmount: commissionAmount,
             appliedRate: fees.commissionRate,
-            appliedPlatformFee: fees.platformFee
+            appliedPlatformFee: fees.platformFee,
+            status: 'completed' // Explicitly set status
         };
         
         const completedTripRef = ref(db, `completedTrips/${driverId}/${activeTrip.id}`);
@@ -537,16 +542,23 @@ const App: React.FC = () => {
         const passengerHistoryRef = ref(db, `passengers/${activeTrip.passengerId}/completedTrips/${activeTrip.id}`);
         await set(passengerHistoryRef, completedTrip);
 
+        // --- FIX: Update UI State BEFORE removing data to prevent race condition ---
+        setViewingTripSummary(completedTrip as Trip);
+        setOnTripUIVisible(true);
+        setActiveTrip(null); // Clear active trip locally so listeners don't re-trigger weirdly
+        
+        // Remove active trip data
         await remove(ref(db, `trips/${activeTrip.id}`));
         
         const driverRef = ref(db, `drivers/${driverId}`);
         await update(driverRef, { isAvailable: true });
 
-        setViewingTripSummary(completedTrip);
-        setOnTripUIVisible(true);
     } catch (error) {
         console.error("Error completing trip:", error);
-        alert("ခရီးစဉ် ပြီးဆုံးအောင် ဆောင်ရွက်ရာတွင် အမှားအယွင်းရှိနေပါသည်။ အင်တာနက်ချိတ်ဆက်မှုကို စစ်ဆေးပါ။");
+        alert("ခရီးစဉ် ပြီးဆုံးအောင် ဆောင်ရွက်ရာတွင် အမှားအယွင်းရှိနေပါသည်။");
+        // Revert UI state if error occurs (optional but good practice)
+        setActiveTrip(activeTrip); 
+        setViewingTripSummary(null);
     } finally {
         setIsProcessing(false);
     }
@@ -565,7 +577,7 @@ const App: React.FC = () => {
 
   const handleSOSConfirm = () => {
     setShowSOSConfirm(false);
-    alert("အရေးပေါ်အချက်ပေး ပို့လိုက်ပါပြီ။ သင်၏တည်နေရာကို ဘေးကင်းရေးအဖွဲ့ထံ မျှဝေလိုက်ပါသည်။");
+    alert("အရေးပေါ်အချက်ပေး ပို့လိုက်ပါပြီ။");
   }
 
   const handleToggleQuickReplies = () => {
@@ -584,7 +596,7 @@ const App: React.FC = () => {
 
   const handleOpenFullChat = () => {
       setShowQuickReplies(false);
-      setUnreadMessages(0); // Reset unread when opening
+      setUnreadMessages(0); 
       setIsChatOpen(true);
   };
 
@@ -658,7 +670,7 @@ const App: React.FC = () => {
       }
       {isChatOpen && activeTrip && <ChatModal tripId={activeTrip.id} onClose={() => setIsChatOpen(false)} />}
       {cancellationAlert.show && <CancellationAlertModal fee={cancellationAlert.fee} onClose={handleCloseCancellationAlert} />}
-      {showSOSConfirm && <ConfirmModal title="Emergency Alert" message="Are you sure you want to trigger the emergency alert? This will contact our safety team." onConfirm={handleSOSConfirm} onCancel={() => setShowSOSConfirm(false)} />}
+      {showSOSConfirm && <ConfirmModal title="အရေးပေါ် အချက်ပေး" message="ဘေးကင်းရေးအဖွဲ့ထံ သင်၏တည်နေရာကို ပေးပို့မည်မှာ သေချာပါသလား?" onConfirm={handleSOSConfirm} onCancel={() => setShowSOSConfirm(false)} />}
       {showQuickReplies && activeTrip && <QuickReplyPopup onSend={handleSendQuickReply} onOpenChat={handleOpenFullChat} onClose={() => setShowQuickReplies(false)} />}
 
       {tripRequests.length > 0 && isOnline && !activeTrip && <TripRequestAlert trip={tripRequests[0]} onAccept={handleAcceptTrip} onDecline={handleDeclineTrip} />}
@@ -685,7 +697,6 @@ const App: React.FC = () => {
               <button
                   onClick={() => mapRef.current?.recenter()}
                   className="bg-white p-3 rounded-full shadow-lg border border-gray-200 hover:bg-gray-100"
-                  aria-label="Recenter map"
               >
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#39FF14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-blue-500"><path d="M12 8V4H8" stroke="none"/><path d="M12 20v-4h4" stroke="none"/><path d="M4 12H8v4" stroke="none"/><path d="M20 12h-4V8" stroke="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><circle cx="12" cy="12" r="3" stroke="none"/></svg>
               </button>

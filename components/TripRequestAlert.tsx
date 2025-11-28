@@ -25,7 +25,6 @@ const TripRequestAlert: React.FC<TripRequestAlertProps> = ({ trip, onAccept, onD
 
   return (
     <div className="absolute bottom-0 left-0 right-0 p-4 z-20">
-      {/* Changed background to bg-blue-50 (Light Blue) as requested */}
       <div className={`bg-blue-50 border-2 ${isDirectRequest ? 'border-amber-400 shadow-amber-200' : 'border-blue-500 shadow-blue-200'} rounded-2xl p-5 shadow-2xl`}>
         <div className="flex justify-between items-center mb-4">
             <div>
@@ -60,7 +59,6 @@ const TripRequestAlert: React.FC<TripRequestAlertProps> = ({ trip, onAccept, onD
           <p className="text-xs text-green-800 font-bold">ခန့်မှန်း ကျသင့်ငွေ</p>
         </div>
 
-        {/* Buttons are now equal size (flex-1) */}
         <div className="flex gap-3">
           <button
             onClick={handleDeclineClick}

@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trip } from '../types';
 import { CloseIcon, WalletIcon } from './Icons';
 import { getShortLocationName } from '../utils/addressUtils';
-import { push, ref, serverTimestamp } from 'firebase/database';
+import { push, ref, serverTimestamp, get } from 'firebase/database';
 import { db } from '../services/firebase';
 
 interface EarningsModalProps {
@@ -17,20 +17,41 @@ interface EarningsModalProps {
   platformFee: number;
 }
 
-const ADMIN_PAYMENT_INFO = {
-    KPay: "09123456789 (Pyapay Admin)",
-    WavePay: "09987654321 (Pyapay Admin)"
-};
-
 const EarningsModal: React.FC<EarningsModalProps> = ({ onClose, balance, tripHistory, transactions, onViewTripDetails, driverId, commissionRate, platformFee }) => {
   const [showTopupForm, setShowTopupForm] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
   
-  // Form State
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'KPay' | 'WavePay'>('KPay');
   const [txId, setTxId] = useState('');
   const [senderName, setSenderName] = useState('');
+  
+  // Dynamic Payment Info State
+  const [paymentInfo, setPaymentInfo] = useState({ KPay: "Loading...", WavePay: "Loading..." });
+
+  useEffect(() => {
+      const fetchPaymentInfo = async () => {
+          try {
+              const snap = await get(ref(db, 'settings/contact_info'));
+              if (snap.exists()) {
+                  const data = snap.val();
+                  setPaymentInfo({
+                      KPay: data.kpay || "No Info",
+                      WavePay: data.wave || "No Info"
+                  });
+              } else {
+                  setPaymentInfo({ KPay: "Admin Contact", WavePay: "Admin Contact" });
+              }
+          } catch(e) { console.error(e); }
+      };
+      fetchPaymentInfo();
+  }, []);
+
+  const handleCopy = (text: string) => {
+      navigator.clipboard.writeText(text).then(() => {
+          alert('Phone number copied!');
+      });
+  };
 
   const handleRequestTopup = async () => {
       if(!amount || parseInt(amount) <= 0) return alert("ပမာဏ မှန်ကန်စွာ ထည့်သွင်းပါ။");
@@ -59,7 +80,6 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ onClose, balance, tripHis
       }
   };
 
-  // Merge trips and transactions for a unified history view
   const historyItems = [
       ...tripHistory.map(t => ({ 
           type: 'trip', 
@@ -98,13 +118,19 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ onClose, balance, tripHis
                 <div className="mt-4 bg-white text-slate-800 rounded-lg p-4 text-left shadow-inner">
                     <div className="flex justify-between items-center mb-2">
                         <h4 className="font-bold text-blue-600">ငွေဖြည့်ဖောင်</h4>
-                        <button onClick={() => setShowTopupForm(false)} className="text-xs text-red-500">Cancel</button>
+                        <button onClick={() => setShowTopupForm(false)} className="text-xs text-red-500">ပယ်ဖျက်မည်</button>
                     </div>
                     
-                    <div className="mb-3 p-2 bg-blue-50 rounded text-xs border border-blue-100">
+                    <div className="mb-3 p-2 bg-blue-50 rounded text-xs border border-blue-100 space-y-1">
                         <p className="font-bold mb-1">ငွေလွှဲရန် Admin ဖုန်းနံပါတ်များ:</p>
-                        <p>KPay: <span className="font-mono font-bold text-blue-600">{ADMIN_PAYMENT_INFO.KPay}</span></p>
-                        <p>Wave: <span className="font-mono font-bold text-blue-600">{ADMIN_PAYMENT_INFO.WavePay}</span></p>
+                        <div className="flex justify-between items-center">
+                            <p>KPay: <span className="font-mono font-bold text-blue-600">{paymentInfo.KPay}</span></p>
+                            <button onClick={() => handleCopy(paymentInfo.KPay)} className="text-gray-400 hover:text-blue-500"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <p>Wave: <span className="font-mono font-bold text-blue-600">{paymentInfo.WavePay}</span></p>
+                            <button onClick={() => handleCopy(paymentInfo.WavePay)} className="text-gray-400 hover:text-blue-500"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+                        </div>
                     </div>
 
                     <div className="space-y-2">
@@ -155,7 +181,6 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ onClose, balance, tripHis
                 historyItems.map((item, index) => {
                     if (item.type === 'trip') {
                         const trip = item.data as Trip;
-                        // Use stored values if available (from legacy handling) or current props
                         const appliedRate = trip.appliedRate ?? commissionRate;
                         const appliedFee = trip.appliedPlatformFee ?? platformFee;
                         const deduction = trip.commissionAmount || (appliedFee + Math.round((trip.fare - appliedFee) * (appliedRate / 100)));
@@ -166,7 +191,7 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ onClose, balance, tripHis
                                     <div className="bg-red-100 p-2 rounded-full"><WalletIcon className="w-5 h-5 text-red-500"/></div>
                                     <div>
                                         <div className="flex items-center gap-1">
-                                            <p className="font-semibold text-slate-700 text-sm">Commission & Fee</p>
+                                            <p className="font-semibold text-slate-700 text-sm">ကော်မရှင် ဖြတ်တောက်ခြင်း</p>
                                             <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 rounded font-bold">{trip.token}</span>
                                         </div>
                                         <p className="text-xs text-gray-500">{getShortLocationName(trip.dropoffAddress)}</p>
@@ -191,13 +216,13 @@ const EarningsModal: React.FC<EarningsModalProps> = ({ onClose, balance, tripHis
                         let amountColor = isPending ? 'text-yellow-600' : (isPositive ? 'text-green-600' : 'text-red-500');
                         let sign = isPositive ? '+' : '-';
                         
-                        let label = 'Transaction';
-                        if(isTopup) label = 'Top-up Request';
-                        if(isWithdraw) label = 'Withdrawal';
-                        if(isCredit) label = 'Manual Credit';
-                        if(isDebit) label = 'Manual Debit';
+                        let label = 'ငွေစာရင်း';
+                        if(isTopup) label = 'ငွေဖြည့် တောင်းဆိုမှု';
+                        if(isWithdraw) label = 'ငွေထုတ်';
+                        if(isCredit) label = 'Admin ထည့်သွင်းငွေ';
+                        if(isDebit) label = 'Admin နှုတ်ယူငွေ';
                         
-                        if (isPending) label += ' (Pending)';
+                        if (isPending) label += ' (ဆိုင်းငံ့)';
 
                         return (
                             <div key={`tx-${index}`} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
